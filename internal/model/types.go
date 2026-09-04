@@ -1,6 +1,11 @@
 package model
 
-import "fmt"
+import (
+	"fmt"
+	"time"
+)
+
+const DateLayout = "2006-01-02"
 
 const SchemaVersion = 1
 
@@ -41,12 +46,33 @@ func (h Habit) Archived() bool {
 	return h.ArchivedAt != ""
 }
 
+// Grid resolution slices this date without re-parsing, which Validate makes safe by
+// rejecting an unparseable timestamp at load time.
+func (h Habit) ArchivedDate() string {
+	if h.ArchivedAt == "" {
+		return ""
+	}
+	parsed, err := time.Parse(time.RFC3339, h.ArchivedAt)
+	if err != nil {
+		return ""
+	}
+	return parsed.Format(DateLayout)
+}
+
 func (h Habit) Validate() error {
 	if h.Slug == "" {
 		return fmt.Errorf("habit %q has no slug", h.Name)
 	}
 	if !ValidScheduleKind(h.Schedule.Kind) {
 		return fmt.Errorf("habit %q has unsupported schedule kind %q", h.Slug, h.Schedule.Kind)
+	}
+	if _, err := time.Parse(DateLayout, h.StartDate); err != nil {
+		return fmt.Errorf("habit %q has invalid start date %q", h.Slug, h.StartDate)
+	}
+	if h.ArchivedAt != "" {
+		if _, err := time.Parse(time.RFC3339, h.ArchivedAt); err != nil {
+			return fmt.Errorf("habit %q has invalid archived_at %q", h.Slug, h.ArchivedAt)
+		}
 	}
 	return nil
 }

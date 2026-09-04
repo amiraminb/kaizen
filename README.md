@@ -9,7 +9,28 @@ Local-first CLI tool for tracking daily habits.
 - Mark a deliberate rest day that keeps the streak alive: `kaizen skip read`
 - Remove a check-in: `kaizen undo read`
 - Backfill any past day: `kaizen done read -d yesterday`, `-d -3`, `-d 2026-08-30`
+- See where today stands: `kaizen today`
+- See streaks and recent history: `kaizen streak`, `kaizen streak read -N 60`
 - Initialize the data files: `kaizen init`
+
+```
+$ kaizen today
+✓  read      Read daily    streak 7
+◦  gym       Gym session   streak 1
+◦  meditate  Meditate 10m  streak 4
+
+3 habits · 1 done · 2 pending
+
+$ kaizen streak -N 14
+habit     recent          cur  best
+read      ·✗✓✓✓✓✗✓✓✓✓✓✓✓    7     7
+gym       ·✗✓✗✓✗✓✗✓✗✓✗✓◦    1     1
+meditate  ·✗✗✗✗✗✗✗✓✓✓✓~◦    4     4
+```
+
+Output drops all colour when it is not going to a terminal, and when `NO_COLOR` is
+set, so `kaizen today | grep` and `kaizen streak | awk` stay clean. The glyphs carry
+every state on their own.
 
 ## Installation
 
@@ -70,8 +91,10 @@ Habits are archived, never deleted, so retiring one keeps its history and stops 
 generating misses. A habit is addressed by its slug, and any unambiguous prefix
 works: `kaizen done med` resolves `meditate`.
 
+Streaks are always measured over a habit's whole history, never over the window on
+screen, so a 14-day strip cannot cap a 40-day run at 14.
+
 ## Roadmap
 
-- `kaizen today` and `kaizen streak`
 - interactive checklist on bare `kaizen`, plus `edit` and `archive`
 - `kaizen log` and `kaizen report`

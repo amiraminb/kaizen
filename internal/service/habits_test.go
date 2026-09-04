@@ -161,8 +161,8 @@ func TestListHabitsExcludesArchived(t *testing.T) {
 	svc, repo := newTestService(t, now)
 
 	seed := []model.Habit{
-		{ID: "hab_1", Slug: "read", Schedule: model.Schedule{Kind: model.ScheduleDaily}},
-		{ID: "hab_2", Slug: "gym", Schedule: model.Schedule{Kind: model.ScheduleDaily}, ArchivedAt: "2026-08-01T00:00:00Z"},
+		{ID: "hab_1", Slug: "read", Schedule: model.Schedule{Kind: model.ScheduleDaily}, StartDate: "2026-07-01"},
+		{ID: "hab_2", Slug: "gym", Schedule: model.Schedule{Kind: model.ScheduleDaily}, StartDate: "2026-07-01", ArchivedAt: "2026-08-01T00:00:00Z"},
 	}
 	if err := repo.SaveHabits(seed); err != nil {
 		t.Fatalf("SaveHabits returned error: %v", err)

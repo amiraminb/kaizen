@@ -5,9 +5,11 @@ import (
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/amiraminb/kaizen/internal/model"
 )
 
-const DateLayout = "2006-01-02"
+const DateLayout = model.DateLayout
 
 // A check-in typed at 01:30 belongs to the previous day, so shifting now backwards
 // by the cutoff lets every downstream date calculation stay an ordinary calendar one.
