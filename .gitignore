@@ -1,0 +1,16 @@
+# macOS
+.DS_Store
+
+# Build artifacts
+/kaizen
+/bin/
+/dist/
+/vendor/
+
+# Go coverage
+*.out
+coverage.txt
+
+# Local environment files
+.env
+.env.*
