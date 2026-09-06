@@ -160,6 +160,74 @@ func TestDataDirRejectsARelativeEnvOverride(t *testing.T) {
 	}
 }
 
+// A blank or unusable override must fail loudly; falling back to the default would put
+// the history somewhere the user would not think to look.
+func TestDataDirRejectsAnUnusableEnvOverride(t *testing.T) {
+	file := filepath.Join(t.TempDir(), "not-a-dir")
+	if err := os.WriteFile(file, []byte("x"), 0o600); err != nil {
+		t.Fatalf("writing fixture returned error: %v", err)
+	}
+
+	tests := []struct {
+		name  string
+		value string
+	}{
+		{name: "empty", value: ""},
+		{name: "whitespace only", value: "   "},
+		{name: "tab only", value: "\t"},
+		{name: "points at a regular file", value: file},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Setenv(DataDirEnv, tc.value)
+
+			dir, err := NewFileRepository().DataDir()
+			if err == nil {
+				t.Errorf("%s=%q resolved to %q, want an error instead of a silent fallback", DataDirEnv, tc.value, dir)
+			}
+		})
+	}
+}
+
+func TestLoadEntriesRejectsAnUnsupportedStatus(t *testing.T) {
+	dir := t.TempDir()
+	repo := NewFileRepositoryAt(dir)
+
+	document := `{"schema_version":1,"entries":[{"habit_id":"hab_1","date":"2026-09-01","status":"maybe"}]}`
+	if err := os.WriteFile(filepath.Join(dir, EntriesFileName), []byte(document), 0o600); err != nil {
+		t.Fatalf("writing fixture returned error: %v", err)
+	}
+
+	if _, err := repo.LoadEntries(); err == nil {
+		t.Error("an unsupported status must fail loudly rather than silently count as done")
+	}
+}
+
+func TestLoadEntriesRejectsMalformedRecords(t *testing.T) {
+	tests := []struct {
+		name     string
+		document string
+	}{
+		{name: "no habit id", document: `{"entries":[{"habit_id":"","date":"2026-09-01","status":"done"}]}`},
+		{name: "invalid date", document: `{"entries":[{"habit_id":"hab_1","date":"01-09-2026","status":"done"}]}`},
+		{name: "empty status", document: `{"entries":[{"habit_id":"hab_1","date":"2026-09-01","status":""}]}`},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			dir := t.TempDir()
+			if err := os.WriteFile(filepath.Join(dir, EntriesFileName), []byte(tc.document), 0o600); err != nil {
+				t.Fatalf("writing fixture returned error: %v", err)
+			}
+
+			if _, err := NewFileRepositoryAt(dir).LoadEntries(); err == nil {
+				t.Error("a malformed entry must be rejected on load")
+			}
+		})
+	}
+}
+
 func TestDataDirUsesTheEnvOverride(t *testing.T) {
 	dir := t.TempDir()
 	t.Setenv(DataDirEnv, dir)

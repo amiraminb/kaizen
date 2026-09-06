@@ -85,3 +85,18 @@ type Entry struct {
 	CreatedAt string `json:"created_at"`
 	UpdatedAt string `json:"updated_at"`
 }
+
+// The data directory is meant to be kept in git or a syncing folder, so a hand edit or
+// a bad merge is an expected failure mode rather than a hypothetical one.
+func (e Entry) Validate() error {
+	if e.HabitID == "" {
+		return fmt.Errorf("entry on %q has no habit id", e.Date)
+	}
+	if _, err := time.Parse(DateLayout, e.Date); err != nil {
+		return fmt.Errorf("entry for habit %s has invalid date %q", e.HabitID, e.Date)
+	}
+	if !ValidStatus(e.Status) {
+		return fmt.Errorf("entry for habit %s on %s has unsupported status %q", e.HabitID, e.Date, e.Status)
+	}
+	return nil
+}

@@ -34,7 +34,7 @@ func (m selectionModel[T]) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case "up", "k":
 		m.cursor = max(m.cursor-1, 0)
 	case "down", "j":
-		m.cursor = min(m.cursor+1, len(m.items)-1)
+		m.cursor = max(min(m.cursor+1, len(m.items)-1), 0)
 	case "enter":
 		if len(m.items) == 0 {
 			return m, tea.Quit

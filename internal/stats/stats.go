@@ -55,22 +55,47 @@ func (s Summary) Completion() float64 {
 	return float64(s.Done) / float64(scored)
 }
 
+type bounds struct {
+	start    string
+	archived string
+	daily    bool
+}
+
+// Built once per grid, not per cell, since the archived date parses RFC3339. An
+// unparseable one fails closed, so it cannot silently resurrect a retired habit.
+func boundsOf(habit model.Habit) bounds {
+	archived := habit.ArchivedDate()
+	return bounds{
+		start:    habit.StartDate,
+		archived: archived,
+		daily:    habit.Schedule.Kind == model.ScheduleDaily && (habit.ArchivedAt == "" || archived != ""),
+	}
+}
+
+func (b bounds) covers(date string) bool {
+	if date < b.start {
+		return false
+	}
+	if b.archived != "" && date > b.archived {
+		return false
+	}
+	return b.daily
+}
+
 func IsScheduled(habit model.Habit, date string) bool {
-	if date < habit.StartDate {
-		return false
-	}
-	if archived := habit.ArchivedDate(); archived != "" && date > archived {
-		return false
-	}
-	return habit.Schedule.Kind == model.ScheduleDaily
+	return boundsOf(habit).covers(date)
 }
 
 func Resolve(habit model.Habit, index Index, date, asOf string) (model.DayStatus, model.Entry) {
-	if !IsScheduled(habit, date) {
+	return resolve(boundsOf(habit), habit.ID, index, date, asOf)
+}
+
+func resolve(within bounds, habitID string, index Index, date, asOf string) (model.DayStatus, model.Entry) {
+	if !within.covers(date) {
 		return model.DayNotApplicable, model.Entry{}
 	}
 
-	entry, ok := index.Lookup(habit.ID, date)
+	entry, ok := index.Lookup(habitID, date)
 	if ok {
 		if entry.Status == model.StatusSkipped {
 			return model.DaySkipped, entry
@@ -89,10 +114,12 @@ func Resolve(habit model.Habit, index Index, date, asOf string) (model.DayStatus
 }
 
 func Grid(habit model.Habit, index Index, from, to time.Time, asOf string) []Cell {
+	within := boundsOf(habit)
+
 	var cells []Cell
 	for day := from; !day.After(to); day = day.AddDate(0, 0, 1) {
 		date := day.Format(model.DateLayout)
-		status, entry := Resolve(habit, index, date, asOf)
+		status, entry := resolve(within, habit.ID, index, date, asOf)
 		cells = append(cells, Cell{Date: date, Status: status, Entry: entry})
 	}
 	return cells

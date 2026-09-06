@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/amiraminb/kaizen/internal/clock"
 	"github.com/amiraminb/kaizen/internal/model"
 	"github.com/amiraminb/kaizen/internal/render"
 	"github.com/amiraminb/kaizen/internal/stats"
@@ -29,6 +30,10 @@ func (r checklistRow) changed() bool {
 	return r.desired != intentOf(r.original)
 }
 
+func (r checklistRow) toggleable() bool {
+	return r.original != model.DayNotApplicable
+}
+
 func intentOf(status model.DayStatus) intent {
 	switch status {
 	case model.DayDone:
@@ -42,12 +47,15 @@ func intentOf(status model.DayStatus) intent {
 
 type checklistModel struct {
 	rows      []checklistRow
+	date      string
 	cursor    int
 	confirmed bool
 	quit      bool
 }
 
-func newChecklistModel(summaries []stats.Summary) checklistModel {
+// The date is captured with the rows because resolving it again at commit time files
+// the check-in under the wrong day if the session crosses the day-start cutoff.
+func newChecklistModel(summaries []stats.Summary, date string) checklistModel {
 	rows := make([]checklistRow, len(summaries))
 	for i, summary := range summaries {
 		rows[i] = checklistRow{
@@ -57,7 +65,7 @@ func newChecklistModel(summaries []stats.Summary) checklistModel {
 			desired:  intentOf(summary.Today),
 		}
 	}
-	return checklistModel{rows: rows}
+	return checklistModel{rows: rows, date: date}
 }
 
 func (m checklistModel) Init() tea.Cmd { return nil }
@@ -99,7 +107,7 @@ func (m checklistModel) currentDesired() intent {
 }
 
 func (m *checklistModel) setDesired(next intent) {
-	if len(m.rows) == 0 {
+	if len(m.rows) == 0 || !m.rows[m.cursor].toggleable() {
 		return
 	}
 	m.rows[m.cursor].desired = next
@@ -138,19 +146,26 @@ func (m checklistModel) View() string {
 		}
 
 		trailing := mutedStyle.Render(fmt.Sprintf("streak %d", row.streak))
-		if row.changed() {
+		switch {
+		case row.changed():
 			trailing = warnStyle.Render("changed")
+		case !row.toggleable():
+			trailing = mutedStyle.Render("starts " + row.habit.StartDate)
 		}
 
-		fmt.Fprintf(&out, "%s%s  %s  %s  %s\n", marker, checkbox(row.desired), slug, valueStyle.Render(row.habit.Name), trailing)
+		fmt.Fprintf(&out, "%s%s  %s  %s  %s\n", marker, checkbox(row), slug, valueStyle.Render(row.habit.Name), trailing)
 	}
 
 	out.WriteString("\n" + mutedStyle.Render("(space cycle, d done, s skip, c clear, enter save, esc cancel)") + "\n")
 	return out.String()
 }
 
-func checkbox(desired intent) string {
-	switch desired {
+func checkbox(row checklistRow) string {
+	if !row.toggleable() {
+		return emptyStyle.Render("[" + render.GlyphNotApplicable + "]")
+	}
+
+	switch row.desired {
 	case intentDone:
 		return doneStyle.Render("[" + render.GlyphDone + "]")
 	case intentSkipped:
@@ -166,7 +181,7 @@ func RunChecklist() (int, error) {
 		return 0, err
 	}
 
-	final, err := tea.NewProgram(newChecklistModel(report.Summaries)).Run()
+	final, err := tea.NewProgram(newChecklistModel(report.Summaries, clock.DateOf(report.AsOf))).Run()
 	if err != nil {
 		return 0, err
 	}
@@ -175,10 +190,10 @@ func RunChecklist() (int, error) {
 	if !result.confirmed {
 		return 0, nil
 	}
-	return applyChecklist(result.rows)
+	return applyChecklist(result.rows, result.date)
 }
 
-func applyChecklist(rows []checklistRow) (int, error) {
+func applyChecklist(rows []checklistRow, date string) (int, error) {
 	applied := 0
 	for _, row := range rows {
 		if !row.changed() {
@@ -188,11 +203,11 @@ func applyChecklist(rows []checklistRow) (int, error) {
 		var err error
 		switch row.desired {
 		case intentDone:
-			_, err = Svc.CheckIn(row.habit.Slug, "", model.StatusDone, "")
+			_, err = Svc.CheckIn(row.habit.Slug, date, model.StatusDone, "")
 		case intentSkipped:
-			_, err = Svc.CheckIn(row.habit.Slug, "", model.StatusSkipped, "")
+			_, err = Svc.CheckIn(row.habit.Slug, date, model.StatusSkipped, "")
 		default:
-			_, err = Svc.Undo(row.habit.Slug, "")
+			_, err = Svc.Undo(row.habit.Slug, date)
 		}
 		if err != nil {
 			return applied, err

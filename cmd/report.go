@@ -35,7 +35,7 @@ Subcommands:
 			return err
 		}
 
-		report, err := svc.Summaries(from, to, reportAll)
+		report, err := svc.Summaries(asOf, from, to, reportAll)
 		if err != nil {
 			return err
 		}

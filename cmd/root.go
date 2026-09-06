@@ -41,14 +41,15 @@ var rootCmd = &cobra.Command{
 		}
 
 		applied, err := tui.RunChecklist()
+		if applied > 0 {
+			fmt.Fprintf(out, "recorded %d change(s)\n", applied)
+		}
 		if err != nil {
 			return err
 		}
 		if applied == 0 {
 			fmt.Fprintln(out, "no changes")
-			return nil
 		}
-		fmt.Fprintf(out, "recorded %d change(s)\n", applied)
 		return nil
 	},
 }
@@ -57,8 +58,12 @@ func Execute() error {
 	return rootCmd.Execute()
 }
 
-// Without a terminal the checklist cannot run at all, and bubbletea's own failure
-// reads as a crash, so a piped or scripted invocation gets today's status instead.
+// Both ends must be a terminal: stdin alone is not enough, because `kaizen > file`
+// leaves stdin a TTY and would render the whole TUI into the file.
 func interactive() bool {
-	return isatty.IsTerminal(os.Stdin.Fd()) || isatty.IsCygwinTerminal(os.Stdin.Fd())
+	return isTerminal(os.Stdin) && isTerminal(os.Stdout)
+}
+
+func isTerminal(file *os.File) bool {
+	return isatty.IsTerminal(file.Fd()) || isatty.IsCygwinTerminal(file.Fd())
 }

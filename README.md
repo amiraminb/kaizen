@@ -61,9 +61,16 @@ date        habit  status   note
 `YYYY-MM-DD`, or a `YYYY-MM-DD..YYYY-MM-DD` span. The default is the current month.
 Open-ended ranges stop at today rather than running into the future.
 
-Use `Nd` rather than `-N` for relative ranges: a leading dash is consumed by the flag
-parser before the command sees it. `-N` still works for the `--date` flag, where it
-is a flag value, as in `kaizen done read -d -3`.
+A range never ends in the future. An end date past today is clamped to today, and a
+range that starts in the future is rejected.
+
+Use `Nd` for positional ranges: a leading dash is consumed by the flag parser before
+the command sees it. The two relative forms are not the same window — `7d` is the last
+7 days, while `-7` means "7 days ago through today", which is 8 days. `-N` still works
+for the `--date` flag, where it is a flag value, as in `kaizen done read -d -3`.
+
+A habit whose start date has not arrived shows as `·` and cannot be checked off until
+it starts.
 
 Output drops all colour when it is not going to a terminal, and when `NO_COLOR` is
 set, so `kaizen today | grep` and `kaizen streak | awk` stay clean. The glyphs carry

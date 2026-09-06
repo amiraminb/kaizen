@@ -24,9 +24,16 @@ func (r *FileRepository) DataDir() (string, error) {
 		return r.dataDir, nil
 	}
 
-	if dir := strings.TrimSpace(os.Getenv(DataDirEnv)); dir != "" {
-		if !filepath.IsAbs(dir) {
+	if raw, set := os.LookupEnv(DataDirEnv); set {
+		dir := strings.TrimSpace(raw)
+		switch {
+		case dir == "":
+			return "", fmt.Errorf("%s is set but blank, unset it to use the default location", DataDirEnv)
+		case !filepath.IsAbs(dir):
 			return "", fmt.Errorf("%s must be an absolute path, got %q", DataDirEnv, dir)
+		}
+		if info, err := os.Stat(dir); err == nil && !info.IsDir() {
+			return "", fmt.Errorf("%s points at %q, which is not a directory", DataDirEnv, dir)
 		}
 		return dir, nil
 	}

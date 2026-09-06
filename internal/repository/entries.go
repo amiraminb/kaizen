@@ -17,7 +17,16 @@ func (r *FileRepository) LoadEntries() ([]model.Entry, error) {
 	if err != nil {
 		return nil, err
 	}
-	return loadDocument(path, func(d entriesDocument) []model.Entry { return d.Entries })
+	entries, err := loadDocument(path, func(d entriesDocument) []model.Entry { return d.Entries })
+	if err != nil {
+		return nil, err
+	}
+	for _, entry := range entries {
+		if err := entry.Validate(); err != nil {
+			return nil, err
+		}
+	}
+	return entries, nil
 }
 
 // Entries are sorted on save so the file stays readable and produces small diffs

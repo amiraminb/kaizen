@@ -3,6 +3,7 @@ package render
 import (
 	"io"
 	"os"
+	"strings"
 
 	"github.com/amiraminb/kaizen/internal/model"
 	"github.com/charmbracelet/lipgloss"
@@ -79,15 +80,7 @@ func Pad(text string, width int) string {
 	if gap <= 0 {
 		return text
 	}
-	return text + spaces(gap)
-}
-
-func spaces(count int) string {
-	out := make([]byte, count)
-	for i := range out {
-		out[i] = ' '
-	}
-	return string(out)
+	return text + strings.Repeat(" ", gap)
 }
 
 func StatusWord(status model.DayStatus) string {

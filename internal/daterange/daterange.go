@@ -47,8 +47,6 @@ func Resolve(input string, asOf time.Time) (time.Time, time.Time, error) {
 		return start, time.Date(year, time.December, 31, 0, 0, 0, 0, today.Location()), nil
 	}
 
-	// "7d" is the documented relative form because a leading dash is consumed by the
-	// flag parser before the command ever sees it; "-7" still works after "--".
 	if days, ok := relativeDays(value); ok {
 		return today.AddDate(0, 0, -days+1), today, nil
 	}
@@ -57,7 +55,17 @@ func Resolve(input string, asOf time.Time) (time.Time, time.Time, error) {
 	if err != nil {
 		return time.Time{}, time.Time{}, err
 	}
-	return start, end, nil
+	if start.After(today) {
+		return time.Time{}, time.Time{}, fmt.Errorf("range %q starts in the future", value)
+	}
+	return start, earliest(end, today), nil
+}
+
+func earliest(a, b time.Time) time.Time {
+	if a.Before(b) {
+		return a
+	}
+	return b
 }
 
 func parseExplicitRange(value string, today time.Time) (time.Time, time.Time, error) {
@@ -88,6 +96,8 @@ func parseExplicitRange(value string, today time.Time) (time.Time, time.Time, er
 	return start, end, nil
 }
 
+// Returns a window size in days. "Nd" is the documented form because a leading dash is
+// consumed by the flag parser; "-N" means "N days ago through today", so one more day.
 func relativeDays(value string) (int, bool) {
 	if trimmed, ok := strings.CutSuffix(value, "d"); ok {
 		days, err := strconv.Atoi(trimmed)

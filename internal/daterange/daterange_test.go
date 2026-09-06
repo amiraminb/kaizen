@@ -28,7 +28,15 @@ func TestResolve(t *testing.T) {
 		{name: "year stops today", input: "year", wantFrom: "2026-01-01", wantTo: "2026-09-17"},
 		{name: "lastyear is a full year", input: "lastyear", wantFrom: "2025-01-01", wantTo: "2025-12-31"},
 		{name: "case insensitive", input: "TODAY", wantFrom: "2026-09-17", wantTo: "2026-09-17"},
-		{name: "negative days", input: "-6", wantFrom: "2026-09-11", wantTo: "2026-09-17"},
+		{name: "negative days means N days ago through today", input: "-6", wantFrom: "2026-09-11", wantTo: "2026-09-17"},
+		{name: "Nd means the last N days", input: "7d", wantFrom: "2026-09-11", wantTo: "2026-09-17"},
+		{name: "single day window", input: "1d", wantFrom: "2026-09-17", wantTo: "2026-09-17"},
+		{name: "Nd spanning a month boundary", input: "30d", wantFrom: "2026-08-19", wantTo: "2026-09-17"},
+		{name: "zero days is not a window", input: "0d", wantError: true},
+		{name: "negative Nd", input: "-7d", wantError: true},
+		{name: "explicit range with a future end is clamped", input: "2026-09-01..2099-12-31", wantFrom: "2026-09-01", wantTo: "2026-09-17"},
+		{name: "explicit single future date", input: "2099-12-31", wantError: true},
+		{name: "explicit range starting in the future", input: "2099-01-01..2099-12-31", wantError: true},
 		{name: "single explicit date", input: "2026-08-30", wantFrom: "2026-08-30", wantTo: "2026-08-30"},
 		{name: "explicit span", input: "2026-08-01..2026-08-15", wantFrom: "2026-08-01", wantTo: "2026-08-15"},
 		{name: "span with spaces", input: "2026-08-01 .. 2026-08-15", wantFrom: "2026-08-01", wantTo: "2026-08-15"},
@@ -65,7 +73,7 @@ func TestResolve(t *testing.T) {
 func TestResolveNeverReturnsAFutureEndForOpenRanges(t *testing.T) {
 	asOf := time.Date(2026, 9, 17, 14, 30, 0, 0, time.UTC)
 
-	for _, input := range []string{"", "month", "week", "year", "-30"} {
+	for _, input := range []string{"", "month", "week", "year", "-30", "30d", "2026-09-01..2099-12-31"} {
 		_, to, err := Resolve(input, asOf)
 		if err != nil {
 			t.Fatalf("Resolve(%q) returned error: %v", input, err)

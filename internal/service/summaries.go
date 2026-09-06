@@ -15,13 +15,9 @@ type Report struct {
 	Summaries []stats.Summary
 }
 
-// asOf is resolved once and threaded through, so a single command can never straddle
-// the day-start cutoff and report two different todays.
-func (s *Service) Summaries(from, to time.Time, includeArchived bool) (Report, error) {
-	asOf, err := s.AsOf()
-	if err != nil {
-		return Report{}, err
-	}
+// The caller supplies asOf so a command that already resolved it for its date range
+// cannot resolve a second, later one and report two different todays.
+func (s *Service) Summaries(asOf, from, to time.Time, includeArchived bool) (Report, error) {
 	return s.summarizeAsOf(asOf, from, to, includeArchived)
 }
 

@@ -42,7 +42,38 @@ func newModel(todays ...model.DayStatus) checklistModel {
 			CurrentStreak: i,
 		}
 	}
-	return newChecklistModel(summaries)
+	return newChecklistModel(summaries, "2026-09-05")
+}
+
+func TestChecklistCarriesTheDisplayedDate(t *testing.T) {
+	if got := newModel(model.DayPending).date; got != "2026-09-05" {
+		t.Errorf("date = %q, want the date captured when rows were built", got)
+	}
+}
+
+func TestChecklistWillNotToggleADayThatDoesNotApply(t *testing.T) {
+	m := newModel(model.DayNotApplicable)
+
+	for _, key := range []string{" ", "d", "s", "c"} {
+		if got := press(m, key).rows[0].desired; got != intentNone {
+			t.Errorf("key %q changed a not-applicable row to %v, want it left alone", key, got)
+		}
+	}
+	if press(m, "d").rows[0].changed() {
+		t.Error("a not-applicable row must never report itself as changed")
+	}
+}
+
+func TestChecklistShowsWhyANotApplicableRowIsLocked(t *testing.T) {
+	summaries := []stats.Summary{{
+		Habit: model.Habit{ID: "hab_1", Slug: "trip", Name: "Trip prep", StartDate: "2030-01-01"},
+		Today: model.DayNotApplicable,
+	}}
+
+	view := newChecklistModel(summaries, "2026-09-05").View()
+	if !strings.Contains(view, "starts 2030-01-01") {
+		t.Errorf("view should say why the row is locked:\n%s", view)
+	}
 }
 
 func TestChecklistSeedsFromTodaysStatus(t *testing.T) {
