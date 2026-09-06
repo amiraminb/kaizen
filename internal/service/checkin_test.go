@@ -150,6 +150,82 @@ func TestCheckInRejectsBadStatusAndHabit(t *testing.T) {
 	}
 }
 
+// The checklist opens a past day through Day() so a wrongly recorded check-in can be
+// cleared there; the status it shows must be that day's, not today's.
+func TestDayReportsThePastDaysOwnStatus(t *testing.T) {
+	now := time.Date(2026, 9, 5, 12, 0, 0, 0, time.UTC)
+	svc, repo := newTestService(t, now)
+	seedHabit(t, repo, "read", "2026-09-01")
+
+	if _, err := svc.CheckIn("read", "2026-09-03", model.StatusDone, ""); err != nil {
+		t.Fatalf("CheckIn returned error: %v", err)
+	}
+
+	tests := []struct {
+		name  string
+		input string
+		want  model.DayStatus
+	}{
+		{name: "the recorded day", input: "2026-09-03", want: model.DayDone},
+		{name: "an untouched past day", input: "2026-09-02", want: model.DayMiss},
+		{name: "today", input: "", want: model.DayPending},
+		{name: "before the habit started", input: "2026-08-30", want: model.DayNotApplicable},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			report, err := svc.Day(tc.input)
+			if err != nil {
+				t.Fatalf("Day(%q) returned error: %v", tc.input, err)
+			}
+			if len(report.Summaries) != 1 {
+				t.Fatalf("got %d summaries, want 1", len(report.Summaries))
+			}
+
+			date := report.From.Format(model.DateLayout)
+			if got := report.Summaries[0].StatusOn(date); got != tc.want {
+				t.Errorf("status on %s = %v, want %v", date, got, tc.want)
+			}
+		})
+	}
+}
+
+func TestDayRejectsAFutureDate(t *testing.T) {
+	now := time.Date(2026, 9, 5, 12, 0, 0, 0, time.UTC)
+	svc, repo := newTestService(t, now)
+	seedHabit(t, repo, "read", "2026-09-01")
+
+	if _, err := svc.Day("2026-09-06"); err == nil {
+		t.Error("opening a future day must be rejected")
+	}
+}
+
+func TestClearingAPastDayRemovesTheEntry(t *testing.T) {
+	now := time.Date(2026, 9, 5, 12, 0, 0, 0, time.UTC)
+	svc, repo := newTestService(t, now)
+	seedHabit(t, repo, "read", "2026-09-01")
+
+	if _, err := svc.CheckIn("read", "2026-09-03", model.StatusDone, ""); err != nil {
+		t.Fatalf("CheckIn returned error: %v", err)
+	}
+
+	result, err := svc.Undo("read", "2026-09-03")
+	if err != nil {
+		t.Fatalf("Undo returned error: %v", err)
+	}
+	if !result.Removed {
+		t.Fatal("Undo should have removed the past entry")
+	}
+
+	report, err := svc.Day("2026-09-03")
+	if err != nil {
+		t.Fatalf("Day returned error: %v", err)
+	}
+	if got := report.Summaries[0].StatusOn("2026-09-03"); got != model.DayMiss {
+		t.Errorf("status = %v, want the day to fall back to a miss", got)
+	}
+}
+
 func TestUndo(t *testing.T) {
 	now := time.Date(2026, 9, 3, 12, 0, 0, 0, time.UTC)
 	svc, repo := newTestService(t, now)

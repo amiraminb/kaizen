@@ -48,6 +48,7 @@ func intentOf(status model.DayStatus) intent {
 type checklistModel struct {
 	rows      []checklistRow
 	date      string
+	heading   string
 	cursor    int
 	confirmed bool
 	quit      bool
@@ -58,14 +59,15 @@ type checklistModel struct {
 func newChecklistModel(summaries []stats.Summary, date string) checklistModel {
 	rows := make([]checklistRow, len(summaries))
 	for i, summary := range summaries {
+		status := summary.StatusOn(date)
 		rows[i] = checklistRow{
 			habit:    summary.Habit,
 			streak:   summary.CurrentStreak,
-			original: summary.Today,
-			desired:  intentOf(summary.Today),
+			original: status,
+			desired:  intentOf(status),
 		}
 	}
-	return checklistModel{rows: rows, date: date}
+	return checklistModel{rows: rows, date: date, heading: date}
 }
 
 func (m checklistModel) Init() tea.Cmd { return nil }
@@ -135,7 +137,7 @@ func (m checklistModel) View() string {
 	}
 
 	var out strings.Builder
-	out.WriteString("Today\n\n")
+	fmt.Fprintf(&out, "%s\n\n", m.heading)
 
 	for i, row := range m.rows {
 		marker := "  "
@@ -182,8 +184,8 @@ type ChecklistOutcome struct {
 
 // With nothing to toggle the event loop would render a hint and then block on a
 // keypress, which reads as a hang because no prompt is visible.
-func RunChecklist() (ChecklistOutcome, error) {
-	report, err := Svc.Today(1)
+func RunChecklist(dateInput string) (ChecklistOutcome, error) {
+	report, err := Svc.Day(dateInput)
 	if err != nil {
 		return ChecklistOutcome{}, err
 	}
@@ -191,7 +193,14 @@ func RunChecklist() (ChecklistOutcome, error) {
 		return ChecklistOutcome{}, nil
 	}
 
-	final, err := tea.NewProgram(newChecklistModel(report.Summaries, clock.DateOf(report.AsOf))).Run()
+	date := clock.DateOf(report.From)
+	list := newChecklistModel(report.Summaries, date)
+	list.heading = "Today"
+	if date != clock.DateOf(report.AsOf) {
+		list.heading = date + mutedStyle.Render("  (not today)")
+	}
+
+	final, err := tea.NewProgram(list).Run()
 	if err != nil {
 		return ChecklistOutcome{Started: true}, err
 	}

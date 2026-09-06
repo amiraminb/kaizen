@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 
+	"github.com/amiraminb/kaizen/internal/clock"
 	"github.com/amiraminb/kaizen/internal/render"
 	"github.com/amiraminb/kaizen/internal/repository"
 	"github.com/amiraminb/kaizen/internal/service"
@@ -36,6 +37,13 @@ DAILY USE
   under the cursor through done, skipped and cleared; d, s and c set a state
   directly; c also clears something you recorded by mistake. Enter saves only the
   rows you actually changed, and esc discards everything.
+
+  To fix a day you got wrong, open that day instead of today:
+
+  kaizen -d yesterday            edit yesterday; also -d -2 or -d 2026-09-03
+
+  Clearing a row there with c removes the check-in entirely, which is the only way
+  to turn a day you recorded by mistake back into a miss.
 
   For one habit the express lane is faster:
 
@@ -86,10 +94,10 @@ var rootCmd = &cobra.Command{
 		out := cmd.OutOrStdout()
 
 		if !interactive() {
-			return printToday(cmd)
+			return printDay(cmd)
 		}
 
-		outcome, err := tui.RunChecklist()
+		outcome, err := tui.RunChecklist(checklistDate)
 		if outcome.Applied > 0 {
 			fmt.Fprintf(out, "recorded %d change(s)\n", outcome.Applied)
 		}
@@ -97,7 +105,7 @@ var rootCmd = &cobra.Command{
 			return err
 		}
 		if !outcome.Started {
-			return printToday(cmd)
+			return printDay(cmd)
 		}
 		if outcome.Applied == 0 {
 			fmt.Fprintln(out, "no changes")
@@ -106,18 +114,24 @@ var rootCmd = &cobra.Command{
 	},
 }
 
+var checklistDate string
+
+func init() {
+	rootCmd.Flags().StringVarP(&checklistDate, "date", "d", "", "day to open: YYYY-MM-DD, today, yesterday or -N")
+}
+
 func Execute() error {
 	return rootCmd.Execute()
 }
 
-func printToday(cmd *cobra.Command) error {
-	report, err := svc.Today(1)
+func printDay(cmd *cobra.Command) error {
+	report, err := svc.Day(checklistDate)
 	if err != nil {
 		return err
 	}
 
 	out := cmd.OutOrStdout()
-	fmt.Fprint(out, render.New(out).Today(report.Summaries))
+	fmt.Fprint(out, render.New(out).Day(report.Summaries, clock.DateOf(report.From)))
 	return nil
 }
 

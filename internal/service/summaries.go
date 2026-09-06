@@ -1,9 +1,11 @@
 package service
 
 import (
+	"fmt"
 	"strings"
 	"time"
 
+	"github.com/amiraminb/kaizen/internal/clock"
 	"github.com/amiraminb/kaizen/internal/model"
 	"github.com/amiraminb/kaizen/internal/stats"
 )
@@ -19,6 +21,28 @@ type Report struct {
 // cannot resolve a second, later one and report two different todays.
 func (s *Service) Summaries(asOf, from, to time.Time, includeArchived bool) (Report, error) {
 	return s.summarizeAsOf(asOf, from, to, includeArchived)
+}
+
+// A single day, resolved the same way a check-in date is, so the checklist can edit a
+// past day and clear an entry recorded there by mistake.
+func (s *Service) Day(dateInput string) (Report, error) {
+	asOf, err := s.AsOf()
+	if err != nil {
+		return Report{}, err
+	}
+
+	date, err := clock.ParseDate(dateInput, asOf)
+	if err != nil {
+		return Report{}, err
+	}
+	day, err := time.ParseInLocation(model.DateLayout, date, asOf.Location())
+	if err != nil {
+		return Report{}, err
+	}
+	if day.After(truncateToDay(asOf)) {
+		return Report{}, fmt.Errorf("cannot edit a future date (%s)", date)
+	}
+	return s.summarizeAsOf(asOf, day, day, false)
 }
 
 func (s *Service) Today(windowDays int) (Report, error) {

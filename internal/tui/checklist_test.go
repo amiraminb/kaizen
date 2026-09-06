@@ -33,16 +33,19 @@ var keyTypes = map[string]tea.KeyType{
 	"esc":   tea.KeyEscape,
 }
 
+const testDate = "2026-09-05"
+
 func newModel(todays ...model.DayStatus) checklistModel {
 	summaries := make([]stats.Summary, len(todays))
 	for i, today := range todays {
 		summaries[i] = stats.Summary{
 			Habit:         model.Habit{ID: string(rune('a' + i)), Slug: string(rune('a' + i)), Name: "Habit"},
+			Cells:         []stats.Cell{{Date: testDate, Status: today}},
 			Today:         today,
 			CurrentStreak: i,
 		}
 	}
-	return newChecklistModel(summaries, "2026-09-05")
+	return newChecklistModel(summaries, testDate)
 }
 
 func TestChecklistOutcomeReportsWhetherItStarted(t *testing.T) {
@@ -52,7 +55,7 @@ func TestChecklistOutcomeReportsWhetherItStarted(t *testing.T) {
 }
 
 func TestChecklistCarriesTheDisplayedDate(t *testing.T) {
-	if got := newModel(model.DayPending).date; got != "2026-09-05" {
+	if got := newModel(model.DayPending).date; got != testDate {
 		t.Errorf("date = %q, want the date captured when rows were built", got)
 	}
 }
@@ -73,10 +76,10 @@ func TestChecklistWillNotToggleADayThatDoesNotApply(t *testing.T) {
 func TestChecklistShowsWhyANotApplicableRowIsLocked(t *testing.T) {
 	summaries := []stats.Summary{{
 		Habit: model.Habit{ID: "hab_1", Slug: "trip", Name: "Trip prep", StartDate: "2030-01-01"},
-		Today: model.DayNotApplicable,
+		Cells: []stats.Cell{{Date: testDate, Status: model.DayNotApplicable}},
 	}}
 
-	view := newChecklistModel(summaries, "2026-09-05").View()
+	view := newChecklistModel(summaries, testDate).View()
 	if !strings.Contains(view, "starts 2030-01-01") {
 		t.Errorf("view should say why the row is locked:\n%s", view)
 	}

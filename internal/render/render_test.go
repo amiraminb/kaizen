@@ -4,14 +4,23 @@ import (
 	"bytes"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/amiraminb/kaizen/internal/model"
 	"github.com/amiraminb/kaizen/internal/stats"
 )
 
+// lastDay is the date of the final cell, so Day() can look a status up by date.
+const lastDay = "2026-09-05"
+
 func summary(slug, name string, current, longest int, today model.DayStatus, pattern string) stats.Summary {
+	end, err := time.ParseInLocation(model.DateLayout, lastDay, time.UTC)
+	if err != nil {
+		panic(err)
+	}
+
 	var cells []stats.Cell
-	for _, symbol := range pattern {
+	for i, symbol := range pattern {
 		var status model.DayStatus
 		switch symbol {
 		case 'v':
@@ -25,7 +34,9 @@ func summary(slug, name string, current, longest int, today model.DayStatus, pat
 		default:
 			status = model.DayNotApplicable
 		}
-		cells = append(cells, stats.Cell{Status: status})
+
+		date := end.AddDate(0, 0, i-len(pattern)+1).Format(model.DateLayout)
+		cells = append(cells, stats.Cell{Date: date, Status: status})
 	}
 
 	built := stats.Summary{
@@ -62,12 +73,12 @@ func TestPadAccountsForInvisibleEscapes(t *testing.T) {
 	}
 }
 
-func TestTodayRendersOneRowPerHabit(t *testing.T) {
+func TestDayRendersOneRowPerHabit(t *testing.T) {
 	out := &bytes.Buffer{}
-	rendered := New(out).Today([]stats.Summary{
+	rendered := New(out).Day([]stats.Summary{
 		summary("read", "Read daily", 7, 9, model.DayDone, "vvv"),
 		summary("gym", "Gym session", 0, 3, model.DayPending, "xxo"),
-	})
+	}, lastDay)
 
 	lines := strings.Split(strings.TrimRight(rendered, "\n"), "\n")
 	if len(lines) != 4 {
@@ -87,8 +98,8 @@ func TestTodayRendersOneRowPerHabit(t *testing.T) {
 	}
 }
 
-func TestTodayWithNoHabitsSuggestsTheNextStep(t *testing.T) {
-	rendered := New(&bytes.Buffer{}).Today(nil)
+func TestDayWithNoHabitsSuggestsTheNextStep(t *testing.T) {
+	rendered := New(&bytes.Buffer{}).Day(nil, lastDay)
 
 	if !strings.Contains(rendered, "kaizen new") {
 		t.Errorf("empty state = %q, want it to point at kaizen new", rendered)

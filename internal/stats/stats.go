@@ -45,6 +45,15 @@ type Summary struct {
 	LongestStreak int
 }
 
+func (s Summary) StatusOn(date string) model.DayStatus {
+	for _, cell := range s.Cells {
+		if cell.Date == date {
+			return cell.Status
+		}
+	}
+	return model.DayNotApplicable
+}
+
 // Completion deliberately ignores skipped and pending days: a rest day you chose is
 // not a failure, and a day still in progress is not yet a data point.
 func (s Summary) Completion() float64 {

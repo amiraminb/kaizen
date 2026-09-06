@@ -8,7 +8,7 @@ import (
 	"github.com/amiraminb/kaizen/internal/stats"
 )
 
-func (r *Renderer) Today(summaries []stats.Summary) string {
+func (r *Renderer) Day(summaries []stats.Summary, date string) string {
 	if len(summaries) == 0 {
 		return "no habits yet, add one with: kaizen new \"Read daily\"\n"
 	}
@@ -22,10 +22,11 @@ func (r *Renderer) Today(summaries []stats.Summary) string {
 	var out strings.Builder
 	counts := map[model.DayStatus]int{}
 	for _, summary := range summaries {
-		counts[summary.Today]++
+		status := summary.StatusOn(date)
+		counts[status]++
 
 		fmt.Fprintf(&out, "%s  %s  %s  %s\n",
-			r.Glyph(summary.Today),
+			r.Glyph(status),
 			Pad(r.Label(summary.Habit.Slug), slugWidth),
 			Pad(summary.Habit.Name, nameWidth),
 			r.Muted(fmt.Sprintf("streak %d", summary.CurrentStreak)),

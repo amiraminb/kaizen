@@ -9,7 +9,7 @@ Local-first CLI tool for tracking daily habits.
 - Rename a habit or change its slug: `kaizen edit`, or `kaizen edit read --slug reading`
 - Mark habits done: `kaizen done read gym`
 - Mark a deliberate rest day that keeps the streak alive: `kaizen skip read`
-- Clear something recorded by mistake: press `c` in the checklist
+- Fix a day you got wrong: `kaizen -d -2` opens that day, and `c` clears a check-in
 - Backfill any past day: `kaizen done read -d yesterday`, `-d -3`, `-d 2026-08-30`
 - Per-habit completion over a range: `kaizen report`, `kaizen report 30d`, `kaizen report lastmonth`
 - Every check-in with its notes: `kaizen report entries`, `kaizen report entries read 7d`
@@ -125,7 +125,8 @@ Streaks are always measured over a habit's whole history, never over the window 
 screen, so a 30-day report cannot cap a 40-day run at 30. Streak numbers appear in
 `kaizen report` as `cur` and `best`, and next to each habit in the checklist.
 
-Bare `kaizen` needs a terminal. Piped or scripted, it prints today's status instead
+Bare `kaizen` opens today by default and any past day with `-d`, which is the only
+way to turn a day you recorded by mistake back into a miss. It needs a terminal. Piped or scripted, it prints today's status instead
 of failing, so `kaizen | less` and `kaizen > status.txt` both do something useful.
 
 ## Roadmap
