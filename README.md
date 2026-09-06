@@ -125,9 +125,10 @@ Streaks are always measured over a habit's whole history, never over the window 
 screen, so a 30-day report cannot cap a 40-day run at 30. Streak numbers appear in
 `kaizen report` as `cur` and `best`, and next to each habit in the checklist.
 
-Bare `kaizen` opens today by default and any past day with `-d`, which is the only
-way to turn a day you recorded by mistake back into a miss. It needs a terminal. Piped or scripted, it prints today's status instead
-of failing, so `kaizen | less` and `kaizen > status.txt` both do something useful.
+Bare `kaizen` opens today by default and any past day with `-d`, which is the only way
+to turn a day you recorded by mistake back into a miss. It needs a terminal: piped or
+scripted it prints that day's status instead of failing, so `kaizen | less` and
+`kaizen -d -2 > status.txt` both do something useful.
 
 ## Roadmap
 
