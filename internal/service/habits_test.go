@@ -111,6 +111,113 @@ func TestCreateHabitRejectsBadInput(t *testing.T) {
 	}
 }
 
+func TestUpdateHabit(t *testing.T) {
+	now := time.Date(2026, 9, 3, 12, 0, 0, 0, time.UTC)
+
+	t.Run("renaming leaves the slug alone", func(t *testing.T) {
+		svc, _ := newTestService(t, now)
+		if _, err := svc.CreateHabit("Read daily", "read", ""); err != nil {
+			t.Fatalf("CreateHabit returned error: %v", err)
+		}
+
+		updated, err := svc.UpdateHabit("read", "Read every day", "")
+		if err != nil {
+			t.Fatalf("UpdateHabit returned error: %v", err)
+		}
+		if updated.Name != "Read every day" {
+			t.Errorf("name = %q, want the new name", updated.Name)
+		}
+		if updated.Slug != "read" {
+			t.Errorf("slug = %q, want it unchanged by a rename", updated.Slug)
+		}
+	})
+
+	t.Run("changing the slug keeps entry history reachable", func(t *testing.T) {
+		svc, repo := newTestService(t, now)
+		created, err := svc.CreateHabit("Read daily", "read", "")
+		if err != nil {
+			t.Fatalf("CreateHabit returned error: %v", err)
+		}
+		if _, err := svc.CheckIn("read", "", model.StatusDone, ""); err != nil {
+			t.Fatalf("CheckIn returned error: %v", err)
+		}
+
+		updated, err := svc.UpdateHabit("read", "", "reading")
+		if err != nil {
+			t.Fatalf("UpdateHabit returned error: %v", err)
+		}
+		if updated.ID != created.ID {
+			t.Error("a slug change must not change the habit ID")
+		}
+
+		entries, err := repo.LoadEntries()
+		if err != nil {
+			t.Fatalf("LoadEntries returned error: %v", err)
+		}
+		if len(entries) != 1 || entries[0].HabitID != created.ID {
+			t.Errorf("entries = %+v, want the original habit ID untouched", entries)
+		}
+		if _, err := svc.CheckIn("reading", "", model.StatusDone, ""); err != nil {
+			t.Errorf("the new slug should resolve: %v", err)
+		}
+	})
+
+	t.Run("rejects a slug already in use", func(t *testing.T) {
+		svc, _ := newTestService(t, now)
+		if _, err := svc.CreateHabit("Read daily", "read", ""); err != nil {
+			t.Fatalf("CreateHabit returned error: %v", err)
+		}
+		if _, err := svc.CreateHabit("Gym session", "gym", ""); err != nil {
+			t.Fatalf("CreateHabit returned error: %v", err)
+		}
+
+		if _, err := svc.UpdateHabit("read", "", "gym"); err == nil {
+			t.Error("taking another habit's slug must fail")
+		}
+	})
+
+	t.Run("keeping its own slug is allowed", func(t *testing.T) {
+		svc, _ := newTestService(t, now)
+		if _, err := svc.CreateHabit("Read daily", "read", ""); err != nil {
+			t.Fatalf("CreateHabit returned error: %v", err)
+		}
+
+		if _, err := svc.UpdateHabit("read", "Read more", "read"); err != nil {
+			t.Errorf("reusing a habit's own slug must be allowed: %v", err)
+		}
+	})
+
+	t.Run("rejects an invalid slug and an unknown habit", func(t *testing.T) {
+		svc, _ := newTestService(t, now)
+		if _, err := svc.CreateHabit("Read daily", "read", ""); err != nil {
+			t.Fatalf("CreateHabit returned error: %v", err)
+		}
+
+		if _, err := svc.UpdateHabit("read", "", "not a slug"); err == nil {
+			t.Error("an invalid slug must be rejected")
+		}
+		if _, err := svc.UpdateHabit("nope", "x", ""); err == nil {
+			t.Error("an unknown habit must be rejected")
+		}
+	})
+
+	t.Run("no arguments is a no-op that does not touch UpdatedAt", func(t *testing.T) {
+		svc, _ := newTestService(t, now)
+		created, err := svc.CreateHabit("Read daily", "read", "")
+		if err != nil {
+			t.Fatalf("CreateHabit returned error: %v", err)
+		}
+
+		unchanged, err := svc.UpdateHabit("read", "", "")
+		if err != nil {
+			t.Fatalf("UpdateHabit returned error: %v", err)
+		}
+		if unchanged != created {
+			t.Errorf("habit = %+v, want it byte-identical to before", unchanged)
+		}
+	})
+}
+
 func TestResolveHabit(t *testing.T) {
 	habits := []model.Habit{
 		{ID: "hab_1", Slug: "read"},

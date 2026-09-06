@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/amiraminb/kaizen/internal/tui"
 	"github.com/spf13/cobra"
 )
 
@@ -13,15 +14,33 @@ var (
 )
 
 var newCmd = &cobra.Command{
-	Use:   "new <name>",
+	Use:   "new [name]",
 	Short: "Create a habit",
-	Args:  cobra.MinimumNArgs(1),
+	Long: `Create a habit.
+
+With no arguments it prompts for the name and slug.`,
+	Args: cobra.ArbitraryArgs,
 	RunE: func(cmd *cobra.Command, args []string) error {
+		out := cmd.OutOrStdout()
+
+		if len(args) == 0 {
+			habit, created, err := tui.RunHabitNew()
+			if err != nil {
+				return err
+			}
+			if !created {
+				fmt.Fprintln(out, "cancelled")
+				return nil
+			}
+			fmt.Fprintf(out, "created %s (%s), starting %s\n", habit.Slug, habit.Name, habit.StartDate)
+			return nil
+		}
+
 		habit, err := svc.CreateHabit(strings.Join(args, " "), newSlug, newStart)
 		if err != nil {
 			return err
 		}
-		fmt.Fprintf(cmd.OutOrStdout(), "created %s (%s), starting %s\n", habit.Slug, habit.Name, habit.StartDate)
+		fmt.Fprintf(out, "created %s (%s), starting %s\n", habit.Slug, habit.Name, habit.StartDate)
 		return nil
 	},
 }

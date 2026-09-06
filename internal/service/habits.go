@@ -1,12 +1,13 @@
 package service
 
 import (
+	"crypto/rand"
+	"encoding/hex"
 	"errors"
 	"fmt"
 	"regexp"
 	"slices"
 	"strings"
-	"time"
 
 	"github.com/amiraminb/kaizen/internal/clock"
 	"github.com/amiraminb/kaizen/internal/model"
@@ -14,8 +15,12 @@ import (
 
 var slugPattern = regexp.MustCompile(`^[a-z0-9]+(?:-[a-z0-9]+)*$`)
 
-func newHabitID(now time.Time) string {
-	return fmt.Sprintf("hab_%d", now.UnixNano())
+// Entries reference this ID, so two habits sharing one would merge their histories.
+// crypto/rand.Read is documented never to fail, so there is no error to handle.
+func newHabitID() string {
+	var raw [8]byte
+	rand.Read(raw[:])
+	return "hab_" + hex.EncodeToString(raw[:])
 }
 
 func Slugify(name string) string {
@@ -88,21 +93,29 @@ func (s *Service) ListHabits(includeArchived bool) ([]model.Habit, error) {
 	return active, nil
 }
 
+func normalizeSlug(name, slug string) (string, error) {
+	slug = strings.ToLower(strings.TrimSpace(slug))
+	if slug == "" {
+		slug = Slugify(name)
+		if slug == "" {
+			return "", fmt.Errorf("cannot derive a slug from name %q, pass one explicitly", name)
+		}
+	}
+	if !slugPattern.MatchString(slug) {
+		return "", fmt.Errorf("invalid slug %q, use lowercase letters, digits and dashes", slug)
+	}
+	return slug, nil
+}
+
 func (s *Service) CreateHabit(name, slug, startInput string) (model.Habit, error) {
 	name = strings.TrimSpace(name)
 	if name == "" {
 		return model.Habit{}, errors.New("habit name cannot be empty")
 	}
 
-	slug = strings.ToLower(strings.TrimSpace(slug))
-	if slug == "" {
-		slug = Slugify(name)
-		if slug == "" {
-			return model.Habit{}, fmt.Errorf("cannot derive a slug from name %q, pass one explicitly", name)
-		}
-	}
-	if !slugPattern.MatchString(slug) {
-		return model.Habit{}, fmt.Errorf("invalid slug %q, use lowercase letters, digits and dashes", slug)
+	slug, err := normalizeSlug(name, slug)
+	if err != nil {
+		return model.Habit{}, err
 	}
 
 	asOf, err := s.AsOf()
@@ -125,7 +138,7 @@ func (s *Service) CreateHabit(name, slug, startInput string) (model.Habit, error
 	now := s.now()
 	timestamp := clock.Timestamp(now)
 	habit := model.Habit{
-		ID:        newHabitID(now),
+		ID:        newHabitID(),
 		Slug:      slug,
 		Name:      name,
 		Schedule:  model.Schedule{Kind: model.ScheduleDaily},
@@ -138,4 +151,49 @@ func (s *Service) CreateHabit(name, slug, startInput string) (model.Habit, error
 		return model.Habit{}, err
 	}
 	return habit, nil
+}
+
+// A rename never re-derives the slug: the slug is how you address the habit every
+// day, so it changes only when asked for explicitly.
+func (s *Service) UpdateHabit(habitInput, name, slug string) (model.Habit, error) {
+	habits, err := s.repo.LoadHabits()
+	if err != nil {
+		return model.Habit{}, err
+	}
+
+	target, err := ResolveHabit(habits, habitInput, true)
+	if err != nil {
+		return model.Habit{}, err
+	}
+
+	updated := target
+	if trimmed := strings.TrimSpace(name); trimmed != "" {
+		updated.Name = trimmed
+	}
+	if strings.TrimSpace(slug) != "" {
+		normalized, err := normalizeSlug(updated.Name, slug)
+		if err != nil {
+			return model.Habit{}, err
+		}
+		taken := slices.ContainsFunc(habits, func(h model.Habit) bool {
+			return h.Slug == normalized && h.ID != target.ID
+		})
+		if taken {
+			return model.Habit{}, fmt.Errorf("habit %q already exists", normalized)
+		}
+		updated.Slug = normalized
+	}
+
+	if updated == target {
+		return target, nil
+	}
+
+	updated.UpdatedAt = clock.Timestamp(s.now())
+	index := slices.IndexFunc(habits, func(h model.Habit) bool { return h.ID == target.ID })
+	habits[index] = updated
+
+	if err := s.repo.SaveHabits(habits); err != nil {
+		return model.Habit{}, err
+	}
+	return updated, nil
 }
