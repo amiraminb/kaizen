@@ -10,7 +10,6 @@ import (
 var (
 	checkInDate string
 	checkInNote string
-	undoDate    string
 )
 
 var doneCmd = &cobra.Command{
@@ -31,26 +30,6 @@ var skipCmd = &cobra.Command{
 	},
 }
 
-var undoCmd = &cobra.Command{
-	Use:   "undo <habit>...",
-	Short: "Remove a check-in",
-	Args:  cobra.MinimumNArgs(1),
-	RunE: func(cmd *cobra.Command, args []string) error {
-		for _, habitInput := range args {
-			result, err := svc.Undo(habitInput, undoDate)
-			if err != nil {
-				return err
-			}
-			if result.Removed {
-				fmt.Fprintf(cmd.OutOrStdout(), "removed %s on %s\n", result.Habit.Slug, result.Date)
-				continue
-			}
-			fmt.Fprintf(cmd.OutOrStdout(), "%s had nothing recorded on %s\n", result.Habit.Slug, result.Date)
-		}
-		return nil
-	},
-}
-
 func runCheckIn(cmd *cobra.Command, habitInputs []string, status string) error {
 	for _, habitInput := range habitInputs {
 		result, err := svc.CheckIn(habitInput, checkInDate, status, checkInNote)
@@ -67,7 +46,5 @@ func init() {
 		command.Flags().StringVarP(&checkInDate, "date", "d", "", "date to record: YYYY-MM-DD, today, yesterday or -N")
 		command.Flags().StringVarP(&checkInNote, "note", "n", "", "note to attach to the check-in")
 	}
-	undoCmd.Flags().StringVarP(&undoDate, "date", "d", "", "date to clear: YYYY-MM-DD, today, yesterday or -N")
-
-	rootCmd.AddCommand(doneCmd, skipCmd, undoCmd)
+	rootCmd.AddCommand(doneCmd, skipCmd)
 }

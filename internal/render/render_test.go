@@ -95,19 +95,19 @@ func TestTodayWithNoHabitsSuggestsTheNextStep(t *testing.T) {
 	}
 }
 
-func TestStreaksAlignsHabitsOfDifferentNameLengths(t *testing.T) {
-	rendered := New(&bytes.Buffer{}).Streaks([]stats.Summary{
+func TestReportAlignsHabitsOfDifferentNameLengths(t *testing.T) {
+	rendered := New(&bytes.Buffer{}).Report([]stats.Summary{
 		summary("read", "Read daily", 7, 9, model.DayDone, "vvv"),
 		summary("meditate", "Meditate", 1, 4, model.DayPending, "vxo"),
-	})
+	}, "2026-09-03", "2026-09-05")
 
 	lines := strings.Split(strings.TrimRight(rendered, "\n"), "\n")
-	if len(lines) != 3 {
-		t.Fatalf("rendered %d lines, want a header and 2 rows:\n%s", len(lines), rendered)
+	if len(lines) != 5 {
+		t.Fatalf("rendered %d lines, want a range line, a blank, a header and 2 rows:\n%s", len(lines), rendered)
 	}
 
-	stripColumn := strings.Index(lines[0], "recent")
-	for i, line := range lines[1:] {
+	stripColumn := strings.Index(lines[2], "days")
+	for i, line := range lines[3:] {
 		if got := strings.IndexAny(line, GlyphDone+GlyphMiss+GlyphPending); got != stripColumn {
 			t.Errorf("row %d starts its strip at column %d, want %d:\n%s", i, got, stripColumn, rendered)
 		}
@@ -165,9 +165,9 @@ func TestReportShowsRateAndStreaks(t *testing.T) {
 }
 
 func TestBufferOutputCarriesNoEscapes(t *testing.T) {
-	rendered := New(&bytes.Buffer{}).Streaks([]stats.Summary{
+	rendered := New(&bytes.Buffer{}).Report([]stats.Summary{
 		summary("read", "Read daily", 7, 9, model.DayDone, "vsxo"),
-	})
+	}, "2026-09-02", "2026-09-05")
 
 	if strings.Contains(rendered, "\x1b[") {
 		t.Errorf("non-terminal output must carry no ANSI escapes, got %q", rendered)

@@ -36,35 +36,6 @@ func (r *Renderer) Today(summaries []stats.Summary) string {
 	return out.String()
 }
 
-func (r *Renderer) Streaks(summaries []stats.Summary) string {
-	if len(summaries) == 0 {
-		return "no habits yet, add one with: kaizen new \"Read daily\"\n"
-	}
-
-	slugWidth := len("habit")
-	for _, summary := range summaries {
-		slugWidth = max(slugWidth, len(summary.Habit.Slug))
-	}
-
-	var out strings.Builder
-	fmt.Fprintf(&out, "%s  %s  %s  %s\n",
-		Pad(r.Muted("habit"), slugWidth),
-		r.Muted("recent"),
-		r.Muted("cur"),
-		r.Muted("best"),
-	)
-
-	for _, summary := range summaries {
-		fmt.Fprintf(&out, "%s  %s  %3d  %4d\n",
-			Pad(r.Label(summary.Habit.Slug), slugWidth),
-			r.Strip(summary.Cells),
-			summary.CurrentStreak,
-			summary.LongestStreak,
-		)
-	}
-	return out.String()
-}
-
 func (r *Renderer) Report(summaries []stats.Summary, from, to string) string {
 	if len(summaries) == 0 {
 		return "no habits yet, add one with: kaizen new \"Read daily\"\n"
@@ -140,7 +111,12 @@ func (r *Renderer) Strip(cells []stats.Cell) string {
 }
 
 func todayFooter(total int, counts map[model.DayStatus]int) string {
-	parts := []string{fmt.Sprintf("%d habits", total)}
+	noun := "habits"
+	if total == 1 {
+		noun = "habit"
+	}
+
+	parts := []string{fmt.Sprintf("%d %s", total, noun)}
 	for _, status := range []model.DayStatus{model.DayDone, model.DaySkipped, model.DayPending, model.DayMiss} {
 		if count := counts[status]; count > 0 {
 			parts = append(parts, fmt.Sprintf("%d %s", count, StatusWord(status)))
