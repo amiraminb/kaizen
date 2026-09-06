@@ -175,22 +175,34 @@ func checkbox(row checklistRow) string {
 	}
 }
 
-func RunChecklist() (int, error) {
+type ChecklistOutcome struct {
+	Applied int
+	Started bool
+}
+
+// With nothing to toggle the event loop would render a hint and then block on a
+// keypress, which reads as a hang because no prompt is visible.
+func RunChecklist() (ChecklistOutcome, error) {
 	report, err := Svc.Today(1)
 	if err != nil {
-		return 0, err
+		return ChecklistOutcome{}, err
+	}
+	if len(report.Summaries) == 0 {
+		return ChecklistOutcome{}, nil
 	}
 
 	final, err := tea.NewProgram(newChecklistModel(report.Summaries, clock.DateOf(report.AsOf))).Run()
 	if err != nil {
-		return 0, err
+		return ChecklistOutcome{Started: true}, err
 	}
 
 	result := final.(checklistModel)
 	if !result.confirmed {
-		return 0, nil
+		return ChecklistOutcome{Started: true}, nil
 	}
-	return applyChecklist(result.rows, result.date)
+
+	applied, err := applyChecklist(result.rows, result.date)
+	return ChecklistOutcome{Applied: applied, Started: true}, err
 }
 
 func applyChecklist(rows []checklistRow, date string) (int, error) {

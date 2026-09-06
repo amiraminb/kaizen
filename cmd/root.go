@@ -40,14 +40,17 @@ var rootCmd = &cobra.Command{
 			return printToday(cmd)
 		}
 
-		applied, err := tui.RunChecklist()
-		if applied > 0 {
-			fmt.Fprintf(out, "recorded %d change(s)\n", applied)
+		outcome, err := tui.RunChecklist()
+		if outcome.Applied > 0 {
+			fmt.Fprintf(out, "recorded %d change(s)\n", outcome.Applied)
 		}
 		if err != nil {
 			return err
 		}
-		if applied == 0 {
+		if !outcome.Started {
+			return printToday(cmd)
+		}
+		if outcome.Applied == 0 {
 			fmt.Fprintln(out, "no changes")
 		}
 		return nil

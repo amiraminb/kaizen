@@ -45,6 +45,12 @@ func newModel(todays ...model.DayStatus) checklistModel {
 	return newChecklistModel(summaries, "2026-09-05")
 }
 
+func TestChecklistOutcomeReportsWhetherItStarted(t *testing.T) {
+	if (ChecklistOutcome{}).Started {
+		t.Error("the zero outcome must report that the TUI never started, so the caller prints instead of blocking")
+	}
+}
+
 func TestChecklistCarriesTheDisplayedDate(t *testing.T) {
 	if got := newModel(model.DayPending).date; got != "2026-09-05" {
 		t.Errorf("date = %q, want the date captured when rows were built", got)
