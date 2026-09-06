@@ -28,13 +28,24 @@ func summary(slug, name string, current, longest int, today model.DayStatus, pat
 		cells = append(cells, stats.Cell{Status: status})
 	}
 
-	return stats.Summary{
+	built := stats.Summary{
 		Habit:         model.Habit{Slug: slug, Name: name},
 		Cells:         cells,
 		Today:         today,
 		CurrentStreak: current,
 		LongestStreak: longest,
 	}
+	for _, cell := range cells {
+		switch cell.Status {
+		case model.DayDone:
+			built.Done++
+		case model.DaySkipped:
+			built.Skipped++
+		case model.DayMiss:
+			built.Missed++
+		}
+	}
+	return built
 }
 
 func TestPadAccountsForInvisibleEscapes(t *testing.T) {
@@ -100,6 +111,56 @@ func TestStreaksAlignsHabitsOfDifferentNameLengths(t *testing.T) {
 		if got := strings.IndexAny(line, GlyphDone+GlyphMiss+GlyphPending); got != stripColumn {
 			t.Errorf("row %d starts its strip at column %d, want %d:\n%s", i, got, stripColumn, rendered)
 		}
+	}
+}
+
+func TestEntriesAlignsEveryColumnIncludingTheHeader(t *testing.T) {
+	rendered := New(&bytes.Buffer{}).Entries([]stats.EntryRow{
+		{Habit: model.Habit{Slug: "read"}, Entry: model.Entry{Date: "2026-09-05", Status: model.StatusDone}},
+		{Habit: model.Habit{Slug: "meditate"}, Entry: model.Entry{Date: "2026-09-04", Status: model.StatusSkipped, Note: "travel"}},
+	})
+
+	lines := strings.Split(strings.TrimRight(rendered, "\n"), "\n")
+	if len(lines) != 3 {
+		t.Fatalf("rendered %d lines, want a header and 2 rows:\n%s", len(lines), rendered)
+	}
+
+	habitColumn := strings.Index(lines[0], "habit")
+	for i, line := range lines[1:] {
+		if got := strings.Index(line, "read"); i == 0 && got != habitColumn {
+			t.Errorf("row %d puts the habit at column %d, want %d:\n%s", i, got, habitColumn, rendered)
+		}
+		if got := strings.Index(line, "meditate"); i == 1 && got != habitColumn {
+			t.Errorf("row %d puts the habit at column %d, want %d:\n%s", i, got, habitColumn, rendered)
+		}
+	}
+
+	for i, line := range lines {
+		if strings.HasSuffix(line, " ") {
+			t.Errorf("line %d has trailing whitespace: %q", i, line)
+		}
+	}
+}
+
+func TestEntriesWithNoRowsSaysSo(t *testing.T) {
+	if rendered := New(&bytes.Buffer{}).Entries(nil); !strings.Contains(rendered, "no check-ins") {
+		t.Errorf("empty state = %q, want it to say there are no check-ins", rendered)
+	}
+}
+
+func TestReportShowsRateAndStreaks(t *testing.T) {
+	rendered := New(&bytes.Buffer{}).Report([]stats.Summary{
+		summary("read", "Read daily", 13, 13, model.DayDone, "vvvv"),
+	}, "2026-09-01", "2026-09-04")
+
+	if !strings.Contains(rendered, "2026-09-01 .. 2026-09-04") {
+		t.Errorf("report should state the range it covers:\n%s", rendered)
+	}
+	if !strings.Contains(rendered, "100%") {
+		t.Errorf("four done days out of four should read 100%%:\n%s", rendered)
+	}
+	if !strings.Contains(rendered, "13") {
+		t.Errorf("report should carry the streaks:\n%s", rendered)
 	}
 }
 

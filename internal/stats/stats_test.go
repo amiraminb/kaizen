@@ -240,6 +240,51 @@ func TestArchivedHabitStopsGeneratingMisses(t *testing.T) {
 	}
 }
 
+func TestEntryRows(t *testing.T) {
+	habits := []model.Habit{
+		{ID: "hab_read", Slug: "read", Schedule: model.Schedule{Kind: model.ScheduleDaily}, StartDate: "2026-09-01"},
+		{ID: "hab_gym", Slug: "gym", Schedule: model.Schedule{Kind: model.ScheduleDaily}, StartDate: "2026-09-01"},
+		{ID: "hab_old", Slug: "old", Schedule: model.Schedule{Kind: model.ScheduleDaily}, StartDate: "2026-09-01", ArchivedAt: "2026-09-02T10:00:00Z"},
+	}
+	entries := []model.Entry{
+		{HabitID: "hab_read", Date: "2026-09-01", Status: model.StatusDone},
+		{HabitID: "hab_gym", Date: "2026-09-03", Status: model.StatusSkipped, Note: "rest"},
+		{HabitID: "hab_read", Date: "2026-09-03", Status: model.StatusDone},
+		{HabitID: "hab_old", Date: "2026-09-02", Status: model.StatusDone},
+		{HabitID: "hab_ghost", Date: "2026-09-02", Status: model.StatusDone},
+		{HabitID: "hab_read", Date: "2026-09-09", Status: model.StatusDone},
+	}
+
+	rows := EntryRows(habits, entries, "2026-09-01", "2026-09-03")
+
+	want := []struct{ date, slug string }{
+		{"2026-09-03", "gym"},
+		{"2026-09-03", "read"},
+		{"2026-09-02", "old"},
+		{"2026-09-01", "read"},
+	}
+	if len(rows) != len(want) {
+		t.Fatalf("got %d rows, want %d: %+v", len(rows), len(want), rows)
+	}
+	for i, expected := range want {
+		if rows[i].Entry.Date != expected.date || rows[i].Habit.Slug != expected.slug {
+			t.Errorf("row %d = (%s, %s), want (%s, %s)", i, rows[i].Entry.Date, rows[i].Habit.Slug, expected.date, expected.slug)
+		}
+	}
+	if rows[0].Entry.Note != "rest" {
+		t.Errorf("note = %q, want it carried through", rows[0].Entry.Note)
+	}
+}
+
+func TestEntryRowsWithNoMatchesIsEmpty(t *testing.T) {
+	habits := []model.Habit{{ID: habitID, Slug: "read", StartDate: "2026-09-01"}}
+	entries := []model.Entry{{HabitID: habitID, Date: "2026-09-01", Status: model.StatusDone}}
+
+	if rows := EntryRows(habits, entries, "2026-10-01", "2026-10-31"); len(rows) != 0 {
+		t.Errorf("got %d rows outside the range, want 0", len(rows))
+	}
+}
+
 func TestNewIndexKeepsTheLastEntryPerDay(t *testing.T) {
 	index := NewIndex([]model.Entry{
 		{HabitID: habitID, Date: "2026-09-01", Status: model.StatusDone},

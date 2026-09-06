@@ -1,8 +1,10 @@
 package service
 
 import (
+	"strings"
 	"time"
 
+	"github.com/amiraminb/kaizen/internal/model"
 	"github.com/amiraminb/kaizen/internal/stats"
 )
 
@@ -50,6 +52,27 @@ func (s *Service) summarizeAsOf(asOf, from, to time.Time, includeArchived bool) 
 		report.Summaries = append(report.Summaries, stats.Summarize(habit, index, from, to, asOf))
 	}
 	return report, nil
+}
+
+func (s *Service) EntryRows(habitInput string, from, to time.Time) ([]stats.EntryRow, error) {
+	habits, err := s.repo.LoadHabits()
+	if err != nil {
+		return nil, err
+	}
+
+	if strings.TrimSpace(habitInput) != "" {
+		habit, err := ResolveHabit(habits, habitInput, true)
+		if err != nil {
+			return nil, err
+		}
+		habits = []model.Habit{habit}
+	}
+
+	entries, err := s.repo.LoadEntries()
+	if err != nil {
+		return nil, err
+	}
+	return stats.EntryRows(habits, entries, from.Format(model.DateLayout), to.Format(model.DateLayout)), nil
 }
 
 func truncateToDay(t time.Time) time.Time {

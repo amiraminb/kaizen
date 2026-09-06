@@ -13,6 +13,8 @@ Local-first CLI tool for tracking daily habits.
 - Backfill any past day: `kaizen done read -d yesterday`, `-d -3`, `-d 2026-08-30`
 - See where today stands: `kaizen today`
 - See streaks and recent history: `kaizen streak`, `kaizen streak read -N 60`
+- Per-habit completion over a range: `kaizen report`, `kaizen report 30d`, `kaizen report lastmonth`
+- Every check-in with its notes: `kaizen report entries`, `kaizen report entries read 7d`
 - Initialize the data files: `kaizen init`
 
 ```
@@ -37,7 +39,31 @@ habit     recent          cur  best
 read      ·✗✓✓✓✓✗✓✓✓✓✓✓✓    7     7
 gym       ·✗✓✗✓✗✓✗✓✗✓✗✓◦    1     1
 meditate  ·✗✗✗✗✗✗✗✓✓✓✓~◦    4     4
+
+$ kaizen report 20d
+2026-08-17 .. 2026-09-05
+
+habit  days                  done  rate  cur  best
+read   ✗✓✓✓✓✗✓✓✓✓✓✓✓~✓✓✓✓✓✓    17   89%   13    13
+gym    ✗✗✓✗✓✗✓✗✓✗✓✗✓✗✓✗✓~✓◦     9   50%    2     2
+
+$ kaizen report entries read 7d
+date        habit  status   note
+2026-09-05  read   done
+2026-09-04  read   done
+2026-08-30  read   skipped  flu
 ```
+
+### Ranges
+
+`report` and `report entries` accept `today`, `yesterday`, `week`, `lastweek`,
+`month`, `lastmonth`, `year`, `lastyear`, `Nd` for the last N days, a single
+`YYYY-MM-DD`, or a `YYYY-MM-DD..YYYY-MM-DD` span. The default is the current month.
+Open-ended ranges stop at today rather than running into the future.
+
+Use `Nd` rather than `-N` for relative ranges: a leading dash is consumed by the flag
+parser before the command sees it. `-N` still works for the `--date` flag, where it
+is a flag value, as in `kaizen done read -d -3`.
 
 Output drops all colour when it is not going to a terminal, and when `NO_COLOR` is
 set, so `kaizen today | grep` and `kaizen streak | awk` stay clean. The glyphs carry
@@ -110,5 +136,5 @@ of failing, so `kaizen | less` and `kaizen > status.txt` both do something usefu
 
 ## Roadmap
 
-- `kaizen report` and `kaizen report entries`
 - retiring a habit (the `archived_at` field exists but nothing sets it yet)
+- measured habits, such as pages read or minutes meditated
