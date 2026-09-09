@@ -285,6 +285,32 @@ func TestEntryRowsWithNoMatchesIsEmpty(t *testing.T) {
 	}
 }
 
+func TestNoteRowsCombinesStandaloneAndCheckInNotes(t *testing.T) {
+	habits := []model.Habit{
+		{ID: "hab_read", Slug: "read"},
+		{ID: "hab_gym", Slug: "gym"},
+	}
+	entries := []model.Entry{{
+		HabitID: "hab_read", Date: "2026-09-02", Status: model.StatusDone,
+		Note: "old", UpdatedAt: "2026-09-02T08:00:00Z",
+	}}
+	notes := []model.Note{
+		{HabitID: "hab_read", Date: "2026-09-02", Text: "new", UpdatedAt: "2026-09-02T09:00:00Z"},
+		{HabitID: "hab_gym", Date: "2026-09-01", Text: "rested", UpdatedAt: "2026-09-01T09:00:00Z"},
+	}
+
+	rows := NoteRows(habits, entries, notes, "2026-09-01", "2026-09-02")
+	if len(rows) != 2 {
+		t.Fatalf("got %d rows, want 2: %+v", len(rows), rows)
+	}
+	if rows[0].Habit.Slug != "read" || rows[0].Note.Text != "new" {
+		t.Errorf("newest duplicate = %+v, want read/new", rows[0])
+	}
+	if rows[1].Habit.Slug != "gym" || rows[1].Note.Text != "rested" {
+		t.Errorf("standalone note = %+v, want gym/rested", rows[1])
+	}
+}
+
 func TestNewIndexKeepsTheLastEntryPerDay(t *testing.T) {
 	index := NewIndex([]model.Entry{
 		{HabitID: habitID, Date: "2026-09-01", Status: model.StatusDone},

@@ -96,6 +96,25 @@ func (r *Renderer) Entries(rows []stats.EntryRow) string {
 	return out.String()
 }
 
+func (r *Renderer) Notes(rows []stats.NoteRow) string {
+	if len(rows) == 0 {
+		return "no notes in that range\n"
+	}
+
+	habitWidth := len("habit")
+	for _, row := range rows {
+		habitWidth = max(habitWidth, len(row.Habit.Slug))
+	}
+
+	var out strings.Builder
+	fmt.Fprintf(&out, "%s  %s  %s\n", r.Muted("date"), r.Muted("habit"), r.Muted("note"))
+	for _, row := range rows {
+		line := fmt.Sprintf("%s  %s  %s", row.Note.Date, Pad(r.Label(row.Habit.Slug), habitWidth), row.Note.Text)
+		out.WriteString(strings.TrimRight(line, " ") + "\n")
+	}
+	return out.String()
+}
+
 func (r *Renderer) statusText(status string) string {
 	if status == model.StatusSkipped {
 		return r.skipped.Render(status)

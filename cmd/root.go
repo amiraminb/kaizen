@@ -25,60 +25,22 @@ func init() {
 
 var version = "dev"
 
-const longHelp = `Kaizen tracks daily habits in plain JSON files on your own machine.
+const longHelp = `Kaizen is a local-first habit tracker.
 
-GETTING STARTED
-  kaizen init                    create the data directory and its files
-  kaizen new "Read daily"        add a habit; --start backdates it
+Usage:
   kaizen                         open today's checklist
+  kaizen new <name>              create a habit
+  kaizen done <habit>...         record completed habits
+  kaizen skip <habit>...         record a deliberate rest day
+  kaizen note <habit> [date]    write a note without changing completion
+  kaizen notes [habit] [range]   review saved notes
+  kaizen report [range]          view completion and streaks
+  kaizen report entries ...      view check-ins and their notes
+  kaizen edit [habit]            rename a habit or change its slug
+  kaizen init                    initialize the data directory
 
-DAILY USE
-  Run kaizen with no arguments to get today's checklist. Space cycles the habit
-  under the cursor through done, skipped and cleared; d, s and c set a state
-  directly; c also clears something you recorded by mistake. Enter saves only the
-  rows you actually changed, and esc discards everything.
-
-  To fix a day you got wrong, open that day instead of today:
-
-  kaizen -d yesterday            edit yesterday; also -d -2 or -d 2026-09-03
-
-  Clearing a row there with c removes the check-in entirely, which is the only way
-  to turn a day you recorded by mistake back into a miss.
-
-  For one habit the express lane is faster:
-
-  kaizen done read               mark it done for today
-  kaizen skip read               a rest day you chose, on purpose
-  kaizen done read gym           several at once
-  kaizen done read -d yesterday  backfill; also -d -3 or -d 2026-08-30
-  kaizen done read -n "on train" attach a note
-
-HOW A DAY IS COUNTED
-  done      you checked in: the streak grows
-  skipped   a rest day you chose: the streak survives and the day is left out of
-            your completion rate entirely
-  pending   today, nothing recorded yet: never counts against you
-  missed    a past day with nothing recorded: this is what breaks a streak
-  n/a       before the habit's start date
-
-  You never record a miss. Leave the day alone and it becomes one once the day is
-  over. Do not use skip for a day you meant to do and did not, or your completion
-  rate will flatter you.
-
-REVIEWING
-  kaizen report                  completion and streaks for this month so far
-  kaizen report 30d              the last 30 days
-  kaizen report lastmonth        a named period
-  kaizen report entries read 7d  every check-in with its notes
-
-ADDRESSING HABITS
-  Any unambiguous prefix of a slug works, so "kaizen done med" finds meditate.
-  Renaming with kaizen edit never changes the slug unless you pass --slug.
-
-WHERE YOUR DATA LIVES
-  ~/Documents/.kaizen by default. Set KAIZEN_DATA_DIR to an absolute path to keep
-  it somewhere else, such as a synced or version-controlled folder. Every write is
-  atomic, and the files are sorted so they diff cleanly in git.`
+Run kaizen <command> --help for command-specific options. Data is stored locally
+in ~/Documents/.kaizen, or in KAIZEN_DATA_DIR when configured.`
 
 // main prints the error itself, so cobra's duplicate error line and its usage dump
 // are suppressed to keep a failure message from being buried in a help wall.

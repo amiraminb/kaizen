@@ -29,6 +29,7 @@ var initCmd = &cobra.Command{
 			{repository.ConfigFileName, func() error { return repo.SaveConfig(model.DefaultConfig()) }},
 			{repository.HabitsFileName, func() error { return repo.SaveHabits(nil) }},
 			{repository.EntriesFileName, func() error { return repo.SaveEntries(nil) }},
+			{repository.NotesFileName, func() error { return repo.SaveNotes(nil) }},
 		}
 
 		for _, seed := range seeds {

@@ -11,8 +11,13 @@ Local-first CLI tool for tracking daily habits.
 - Mark a deliberate rest day that keeps the streak alive: `kaizen skip read`
 - Fix a day you got wrong: `kaizen -d -2` opens that day, and `c` clears a check-in
 - Backfill any past day: `kaizen done read -d yesterday`, `-d -3`, `-d 2026-08-30`
+- Add a note without marking a habit done: `kaizen note read "felt focused"`,
+  `kaizen note read yesterday "felt tired"`
+- Open the default editor for a note: `kaizen note read`, or
+  `kaizen note read yesterday`
 - Per-habit completion over a range: `kaizen report`, `kaizen report 30d`, `kaizen report lastmonth`
 - Every check-in with its notes: `kaizen report entries`, `kaizen report entries read 7d`
+- Every note, including notes not attached to a check-in: `kaizen notes`, `kaizen notes read 7d`
 - Initialize the data files: `kaizen init`
 
 ```
@@ -37,11 +42,15 @@ date        habit  status   note
 2026-09-05  read   done
 2026-09-04  read   done
 2026-08-30  read   skipped  flu
+
+$ kaizen notes read 7d
+date        habit  note
+2026-09-05  read   felt focused
 ```
 
 ### Ranges
 
-`report` and `report entries` accept `today`, `yesterday`, `week`, `lastweek`,
+`report`, `report entries`, and `notes` accept `today`, `yesterday`, `week`, `lastweek`,
 `month`, `lastmonth`, `year`, `lastyear`, `Nd` for the last N days, a single
 `YYYY-MM-DD`, or a `YYYY-MM-DD..YYYY-MM-DD` span. The default is the current month.
 Open-ended ranges stop at today rather than running into the future.
@@ -97,6 +106,7 @@ history never lands somewhere you would not look for it.
 | `config.json` | `day_start_hour`, the cutoff that decides which day a check-in belongs to |
 | `habits.json` | one record per habit: id, slug, name, schedule, start date, archived-at |
 | `entries.json` | one record per habit per day: status (`done` or `skipped`) and an optional note |
+| `notes.json` | one standalone note per habit per day |
 
 Writes are atomic and durable. Each save marshals to a temp file in the same
 directory, fsyncs it, renames it over the target, then fsyncs the directory.

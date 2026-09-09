@@ -27,12 +27,40 @@ func TestMissingFilesReadAsEmpty(t *testing.T) {
 		t.Errorf("LoadEntries returned %d entries, want 0", len(entries))
 	}
 
+	notes, err := repo.LoadNotes()
+	if err != nil {
+		t.Fatalf("LoadNotes returned error: %v", err)
+	}
+	if len(notes) != 0 {
+		t.Errorf("LoadNotes returned %d notes, want 0", len(notes))
+	}
+
 	config, err := repo.LoadConfig()
 	if err != nil {
 		t.Fatalf("LoadConfig returned error: %v", err)
 	}
 	if config.DayStartHour != model.DefaultDayStartHour {
 		t.Errorf("day start hour = %d, want the default %d", config.DayStartHour, model.DefaultDayStartHour)
+	}
+}
+
+func TestNoteRoundTrip(t *testing.T) {
+	repo := NewFileRepositoryAt(t.TempDir())
+
+	saved := []model.Note{{
+		HabitID: "hab_1", Date: "2026-09-03", Text: "felt focused",
+		CreatedAt: "2026-09-03T12:00:00Z", UpdatedAt: "2026-09-03T12:00:00Z",
+	}}
+	if err := repo.SaveNotes(saved); err != nil {
+		t.Fatalf("SaveNotes returned error: %v", err)
+	}
+
+	loaded, err := repo.LoadNotes()
+	if err != nil {
+		t.Fatalf("LoadNotes returned error: %v", err)
+	}
+	if len(loaded) != 1 || loaded[0] != saved[0] {
+		t.Errorf("LoadNotes = %+v, want %+v", loaded, saved)
 	}
 }
 

@@ -159,6 +159,19 @@ func TestEntriesWithNoRowsSaysSo(t *testing.T) {
 	}
 }
 
+func TestNotesRendersStandaloneNotes(t *testing.T) {
+	rendered := New(&bytes.Buffer{}).Notes([]stats.NoteRow{
+		{Habit: model.Habit{Slug: "read"}, Note: model.Note{Date: "2026-09-05", Text: "felt focused"}},
+	})
+
+	if !strings.Contains(rendered, "date  habit  note") {
+		t.Errorf("notes header = %q, want date, habit and note columns", rendered)
+	}
+	if !strings.Contains(rendered, "2026-09-05  read   felt focused") {
+		t.Errorf("notes row = %q, want the note text", rendered)
+	}
+}
+
 func TestReportShowsRateAndStreaks(t *testing.T) {
 	rendered := New(&bytes.Buffer{}).Report([]stats.Summary{
 		summary("read", "Read daily", 13, 13, model.DayDone, "vvvv"),

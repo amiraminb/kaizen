@@ -180,6 +180,59 @@ type EntryRow struct {
 	Entry model.Entry
 }
 
+type NoteRow struct {
+	Habit model.Habit
+	Note  model.Note
+}
+
+// NoteRows combines notes on old check-ins with standalone notes, preferring the
+// most recently updated note when both records exist for a habit and date.
+func NoteRows(habits []model.Habit, entries []model.Entry, notes []model.Note, from, to string) []NoteRow {
+	byID := make(map[string]model.Habit, len(habits))
+	for _, habit := range habits {
+		byID[habit.ID] = habit
+	}
+
+	byKey := make(map[string]NoteRow)
+	add := func(habit model.Habit, note model.Note) {
+		if note.Text == "" || note.Date < from || note.Date > to {
+			return
+		}
+		key := note.HabitID + "\x00" + note.Date
+		existing, ok := byKey[key]
+		if !ok || note.UpdatedAt >= existing.Note.UpdatedAt {
+			byKey[key] = NoteRow{Habit: habit, Note: note}
+		}
+	}
+
+	for _, entry := range entries {
+		habit, ok := byID[entry.HabitID]
+		if ok {
+			add(habit, model.Note{
+				HabitID: entry.HabitID, Date: entry.Date, Text: entry.Note,
+				CreatedAt: entry.CreatedAt, UpdatedAt: entry.UpdatedAt,
+			})
+		}
+	}
+	for _, note := range notes {
+		if habit, ok := byID[note.HabitID]; ok {
+			add(habit, note)
+		}
+	}
+
+	rows := make([]NoteRow, 0, len(byKey))
+	for _, row := range byKey {
+		rows = append(rows, row)
+	}
+	slices.SortFunc(rows, func(a, b NoteRow) int {
+		if byDate := cmp.Compare(b.Note.Date, a.Note.Date); byDate != 0 {
+			return byDate
+		}
+		return cmp.Compare(a.Habit.Slug, b.Habit.Slug)
+	})
+	return rows
+}
+
 // Newest first, because a log is read to answer "what did I just do", and archived
 // habits are included so retiring one never hides its history.
 func EntryRows(habits []model.Habit, entries []model.Entry, from, to string) []EntryRow {

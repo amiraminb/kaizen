@@ -15,6 +15,7 @@ const (
 	ConfigFileName  = "config.json"
 	HabitsFileName  = "habits.json"
 	EntriesFileName = "entries.json"
+	NotesFileName   = "notes.json"
 )
 
 // An unusable KAIZEN_DATA_DIR is an error rather than a fallback, since silently

@@ -100,3 +100,24 @@ func (e Entry) Validate() error {
 	}
 	return nil
 }
+
+type Note struct {
+	HabitID   string `json:"habit_id"`
+	Date      string `json:"date"`
+	Text      string `json:"text"`
+	CreatedAt string `json:"created_at"`
+	UpdatedAt string `json:"updated_at"`
+}
+
+func (n Note) Validate() error {
+	if n.HabitID == "" {
+		return fmt.Errorf("note on %q has no habit id", n.Date)
+	}
+	if _, err := time.Parse(DateLayout, n.Date); err != nil {
+		return fmt.Errorf("note for habit %s has invalid date %q", n.HabitID, n.Date)
+	}
+	if n.Text == "" {
+		return fmt.Errorf("note for habit %s on %s is empty", n.HabitID, n.Date)
+	}
+	return nil
+}

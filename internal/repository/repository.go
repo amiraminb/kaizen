@@ -9,6 +9,8 @@ type Repository interface {
 	SaveHabits([]model.Habit) error
 	LoadEntries() ([]model.Entry, error)
 	SaveEntries([]model.Entry) error
+	LoadNotes() ([]model.Note, error)
+	SaveNotes([]model.Note) error
 }
 
 type FileRepository struct {
