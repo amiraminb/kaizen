@@ -15,6 +15,8 @@ Local-first CLI tool for tracking daily habits.
   `kaizen note read yesterday "felt tired"`
 - Open the default editor for a note: `kaizen note read`, or
   `kaizen note read yesterday`
+- Pause before giving in to an urge and reflect: `kaizen urge`; save the answers with
+  `kaizen note <habit>`
 - Per-habit completion over a range: `kaizen report`, `kaizen report 30d`, `kaizen report lastmonth`
 - Every check-in with its notes: `kaizen report entries`, `kaizen report entries read 7d`
 - Every note, including notes not attached to a check-in: `kaizen notes`, `kaizen notes read 7d`

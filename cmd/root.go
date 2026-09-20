@@ -33,6 +33,7 @@ Usage:
   kaizen done <habit>...         record completed habits
   kaizen skip <habit>...         record a deliberate rest day
   kaizen note <habit> [date]    write a note without changing completion
+  kaizen urge                    pause and reflect before an urge
   kaizen notes [habit] [range]   review saved notes
   kaizen report [range]          view completion and streaks
   kaizen report entries ...      view check-ins and their notes
