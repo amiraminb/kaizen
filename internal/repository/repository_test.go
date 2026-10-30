@@ -48,7 +48,7 @@ func TestNoteRoundTrip(t *testing.T) {
 	repo := NewFileRepositoryAt(t.TempDir())
 
 	saved := []model.Note{{
-		HabitID: "hab_1", Date: "2026-09-03", Text: "felt focused",
+		HabitID: "hab_1", Text: "felt focused",
 		CreatedAt: "2026-09-03T12:00:00Z", UpdatedAt: "2026-09-03T12:00:00Z",
 	}}
 	if err := repo.SaveNotes(saved); err != nil {
@@ -61,6 +61,29 @@ func TestNoteRoundTrip(t *testing.T) {
 	}
 	if len(loaded) != 1 || loaded[0] != saved[0] {
 		t.Errorf("LoadNotes = %+v, want %+v", loaded, saved)
+	}
+}
+
+func TestLoadNotesMergesLegacyDatedNotesPerHabit(t *testing.T) {
+	dir := t.TempDir()
+	repo := NewFileRepositoryAt(dir)
+	legacy := `{"schema_version":1,"notes":[
+  {"habit_id":"hab_1","date":"2026-09-01","text":"first","created_at":"2026-09-01T12:00:00Z","updated_at":"2026-09-01T12:00:00Z"},
+  {"habit_id":"hab_1","date":"2026-09-03","text":"second","created_at":"2026-09-03T12:00:00Z","updated_at":"2026-09-03T12:00:00Z"}
+]}`
+	if err := os.WriteFile(filepath.Join(dir, NotesFileName), []byte(legacy), 0o600); err != nil {
+		t.Fatalf("writing legacy notes returned error: %v", err)
+	}
+
+	notes, err := repo.LoadNotes()
+	if err != nil {
+		t.Fatalf("LoadNotes returned error: %v", err)
+	}
+	if len(notes) != 1 {
+		t.Fatalf("loaded %d notes, want one document", len(notes))
+	}
+	if notes[0].Date != "" || notes[0].Text != "2026-09-01\nfirst\n\n2026-09-03\nsecond" {
+		t.Errorf("merged note = %+v, want dated history in one document", notes[0])
 	}
 }
 

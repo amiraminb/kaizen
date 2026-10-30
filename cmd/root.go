@@ -32,9 +32,11 @@ Usage:
   kaizen new <name>              create a habit
   kaizen done <habit>...         record completed habits
   kaizen skip <habit>...         record a deliberate rest day
-  kaizen note <habit> [date]    write a note without changing completion
+  kaizen note <habit>           edit a habit note
+  kaizen note <habit> -r        print a habit note
   kaizen urge                    pause and reflect before an urge
-  kaizen notes [habit] [range]   review saved notes
+  kaizen notes <habit>           print a habit note
+  kaizen notes <habit> -e        edit a habit note
   kaizen report [range]          view completion and streaks
   kaizen report entries ...      view check-ins and their notes
   kaizen edit [habit]            rename a habit or change its slug

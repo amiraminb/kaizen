@@ -1,39 +1,25 @@
 package cmd
 
 import (
-	"fmt"
-
-	"github.com/amiraminb/kaizen/internal/daterange"
-	"github.com/amiraminb/kaizen/internal/render"
 	"github.com/spf13/cobra"
 )
 
+var notesEdit bool
+
 var notesCmd = &cobra.Command{
-	Use:     "notes [habit] [range]",
+	Use:     "notes <habit>",
 	Aliases: []string{"journal"},
-	Short:   "Show saved habit notes",
-	Args:    cobra.MaximumNArgs(2),
+	Short:   "Read or edit a habit note",
+	Args:    cobra.ExactArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
-		asOf, err := svc.AsOf()
-		if err != nil {
-			return err
+		if notesEdit {
+			return editHabitNote(cmd, args[0])
 		}
-
-		habitInput, rangeInput := splitEntriesArgs(args, asOf)
-		from, to, err := daterange.Resolve(rangeInput, asOf)
-		if err != nil {
-			return err
-		}
-
-		rows, err := svc.Notes(habitInput, from, to)
-		if err != nil {
-			return err
-		}
-		fmt.Fprint(cmd.OutOrStdout(), render.New(cmd.OutOrStdout()).Notes(rows))
-		return nil
+		return printNote(cmd, args[0])
 	},
 }
 
 func init() {
+	notesCmd.Flags().BoolVarP(&notesEdit, "edit", "e", false, "open the habit note in the editor")
 	rootCmd.AddCommand(notesCmd)
 }

@@ -6,70 +6,60 @@ import (
 	"os/exec"
 	"strings"
 
-	"github.com/amiraminb/kaizen/internal/clock"
 	"github.com/spf13/cobra"
 )
 
-var (
-	noteDate string
-	noteText string
-)
+var noteRead bool
 
 var noteCmd = &cobra.Command{
-	Use:   "note <habit> [date] [text...]",
-	Short: "Save a note for a habit on a day",
-	Long: `Save a note for a habit without changing its check-in status.
+	Use:   "note <habit>",
+	Short: "Edit or read a habit note",
+	Long: `Edit one note document for a habit without changing its check-in status.
 
-The date defaults to today. A date can be YYYY-MM-DD, today, yesterday or -N.
-With no text, the default editor opens with the existing note, if any. The editor
-is selected from VISUAL, then EDITOR, and falls back to vi.
-Pass the note as trailing text or with --text/-n for non-interactive use.`,
-	Args: cobra.MinimumNArgs(1),
+	With no flags, the default editor opens with the habit's existing note, if any.
+Use --read/-r to print the note instead. The editor is selected from VISUAL, then
+EDITOR, and falls back to vi.`,
+	Args: cobra.ExactArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
-		asOf, err := svc.AsOf()
-		if err != nil {
-			return err
+		if noteRead {
+			return printNote(cmd, args[0])
 		}
-
-		dateInput := noteDate
-		textParts := args[1:]
-		if dateInput == "" && len(textParts) > 0 {
-			if _, err := clock.ParseDate(textParts[0], asOf); err == nil {
-				dateInput = textParts[0]
-				textParts = textParts[1:]
-			}
-		}
-		if strings.TrimSpace(noteText) != "" && len(textParts) > 0 {
-			return fmt.Errorf("note text was provided both as an argument and with --text")
-		}
-		text := noteText
-		if strings.TrimSpace(text) == "" {
-			text = strings.Join(textParts, " ")
-		}
-		if len(textParts) == 0 && strings.TrimSpace(noteText) == "" {
-			existing, err := svc.NoteFor(args[0], dateInput)
-			if err != nil {
-				return err
-			}
-			text, err = editNote(cmd, existing.Text)
-			if err != nil {
-				return err
-			}
-		}
-
-		result, err := svc.AddNote(args[0], dateInput, text)
-		if err != nil {
-			return err
-		}
-		fmt.Fprintf(cmd.OutOrStdout(), "noted %s on %s\n", result.Habit.Slug, result.Note.Date)
-		return nil
+		return editHabitNote(cmd, args[0])
 	},
 }
 
 func init() {
-	noteCmd.Flags().StringVarP(&noteDate, "date", "d", "", "date to note: YYYY-MM-DD, today, yesterday or -N")
-	noteCmd.Flags().StringVarP(&noteText, "text", "n", "", "note text")
+	noteCmd.Flags().BoolVarP(&noteRead, "read", "r", false, "print the habit note instead of opening the editor")
 	rootCmd.AddCommand(noteCmd)
+}
+
+func editHabitNote(cmd *cobra.Command, habitInput string) error {
+	existing, err := svc.NoteFor(habitInput)
+	if err != nil {
+		return err
+	}
+	text, err := editNote(cmd, existing.Text)
+	if err != nil {
+		return err
+	}
+	result, err := svc.SaveNote(habitInput, text)
+	if err != nil {
+		return err
+	}
+	fmt.Fprintf(cmd.OutOrStdout(), "saved note for %s\n", result.Habit.Slug)
+	return nil
+}
+
+func printNote(cmd *cobra.Command, habitInput string) error {
+	note, err := svc.NoteFor(habitInput)
+	if err != nil {
+		return err
+	}
+	if note.Text == "" {
+		return fmt.Errorf("no note for %q", habitInput)
+	}
+	fmt.Fprintln(cmd.OutOrStdout(), note.Text)
+	return nil
 }
 
 func editNote(cmd *cobra.Command, initial string) (string, error) {
