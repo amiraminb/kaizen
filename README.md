@@ -11,12 +11,10 @@ Local-first CLI tool for tracking daily habits.
 - Mark a deliberate rest day that keeps the streak alive: `kaizen skip read`
 - Fix a day you got wrong: `kaizen -d -2` opens that day, and `c` clears a check-in
 - Backfill any past day: `kaizen done read -d yesterday`, `-d -3`, `-d 2026-08-30`
-- Edit one persistent note document for a habit: `kaizen note read`
-- Read a habit note in the terminal: `kaizen note read -r`
-- The plural form reads by default and supports explicit editing: `kaizen notes read`,
-  `kaizen notes read -e`
+- Read a habit note in the terminal: `kaizen notes read`
+- Edit one persistent note document for a habit: `kaizen notes read -e`
 - Pause before giving in to an urge and reflect: `kaizen urge`; save the answers with
-  `kaizen note <habit>`
+  `kaizen notes <habit> -e`
 - Per-habit completion over a range: `kaizen report`, `kaizen report 30d`, `kaizen report lastmonth`
 - Every check-in with its notes: `kaizen report entries`, `kaizen report entries read 7d`
 - Initialize the data files: `kaizen init`
@@ -52,6 +50,8 @@ date        habit  status   note
 `month`, `lastmonth`, `year`, `lastyear`, `Nd` for the last N days, a single
 `YYYY-MM-DD`, or a `YYYY-MM-DD..YYYY-MM-DD` span. The default is the current month.
 Open-ended ranges stop at today rather than running into the future.
+Each habit's report row starts at its start date or the beginning of the requested
+range, whichever is later; days before the habit started are omitted.
 
 A range never ends in the future. An end date past today is clamped to today, and a
 range that starts in the future is rejected.

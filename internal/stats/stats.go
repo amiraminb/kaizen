@@ -136,6 +136,7 @@ func Grid(habit model.Habit, index Index, from, to time.Time, asOf string) []Cel
 
 // Streaks are always measured over the habit's whole history, never over the window
 // being displayed, so a 30-day report cannot report a 30-day cap as your best run.
+// Displayed cells cover only the part of the window on or after the habit's start.
 func Summarize(habit model.Habit, index Index, from, to time.Time, asOf time.Time) Summary {
 	asOfDate := asOf.Format(model.DateLayout)
 
@@ -143,7 +144,7 @@ func Summarize(habit model.Habit, index Index, from, to time.Time, asOf time.Tim
 	if err != nil {
 		start = from
 	}
-	full := Grid(habit, index, earliest(start, from), latest(asOf, to), asOfDate)
+	full := Grid(habit, index, start, latest(asOf, to), asOfDate)
 
 	summary := Summary{
 		Habit:         habit,
@@ -238,15 +239,6 @@ func longestStreak(cells []Cell) int {
 
 func latest(a time.Time, b time.Time) time.Time {
 	if a.After(b) {
-		return a
-	}
-	return b
-}
-
-// The grid must cover the display window even when it predates the habit, otherwise
-// strips come out at different lengths per habit and every column after them shifts.
-func earliest(a time.Time, b time.Time) time.Time {
-	if a.Before(b) {
 		return a
 	}
 	return b

@@ -106,11 +106,11 @@ func TestDayWithNoHabitsSuggestsTheNextStep(t *testing.T) {
 	}
 }
 
-func TestReportAlignsHabitsOfDifferentNameLengths(t *testing.T) {
+func TestReportAlignsHabitsOfDifferentAgesAndNameLengths(t *testing.T) {
 	rendered := New(&bytes.Buffer{}).Report([]stats.Summary{
 		summary("read", "Read daily", 7, 9, model.DayDone, "vvv"),
-		summary("meditate", "Meditate", 1, 4, model.DayPending, "vxo"),
-	}, "2026-09-03", "2026-09-05")
+		summary("meditate", "Meditate", 1, 4, model.DayPending, "vvvsxo"),
+	}, "2026-08-31", "2026-09-05")
 
 	lines := strings.Split(strings.TrimRight(rendered, "\n"), "\n")
 	if len(lines) != 5 {
@@ -121,6 +121,9 @@ func TestReportAlignsHabitsOfDifferentNameLengths(t *testing.T) {
 	for i, line := range lines[3:] {
 		if got := strings.IndexAny(line, GlyphDone+GlyphMiss+GlyphPending); got != stripColumn {
 			t.Errorf("row %d starts its strip at column %d, want %d:\n%s", i, got, stripColumn, rendered)
+		}
+		if got, want := len([]rune(line)), len([]rune(lines[2])); got != want {
+			t.Errorf("row %d ends at column %d, want %d to align totals with the header:\n%s", i, got, want, rendered)
 		}
 	}
 }

@@ -27,20 +27,19 @@ var version = "dev"
 
 const longHelp = `Kaizen is a local-first habit tracker.
 
-Usage:
-  kaizen                         open today's checklist
-  kaizen new <name>              create a habit
-  kaizen done <habit>...         record completed habits
-  kaizen skip <habit>...         record a deliberate rest day
-  kaizen note <habit>           edit a habit note
-  kaizen note <habit> -r        print a habit note
-  kaizen urge                    pause and reflect before an urge
-  kaizen notes <habit>           print a habit note
-  kaizen notes <habit> -e        edit a habit note
-  kaizen report [range]          view completion and streaks
-  kaizen report entries ...      view check-ins and their notes
-  kaizen edit [habit]            rename a habit or change its slug
-  kaizen init                    initialize the data directory
+Common usage:
+  kaizen                                  open today's checklist
+  kaizen -d yesterday                     open a past day's checklist
+  kaizen new [name]                       create a habit (prompts if omitted)
+  kaizen done <habit>...                  record completed habits
+  kaizen skip <habit>...                  record a deliberate rest day
+  kaizen notes <habit>                    print a habit note (default)
+  kaizen notes <habit> -e                 edit a habit note in your editor
+  kaizen urge                             pause and reflect before an urge
+  kaizen report [range]                   view completion and streaks
+  kaizen report entries [habit] [range]   view check-ins and their notes
+  kaizen edit [habit]                     rename a habit or change its slug
+  kaizen init                             initialize the data directory
 
 Run kaizen <command> --help for command-specific options. Data is stored locally
 in ~/Documents/.kaizen, or in KAIZEN_DATA_DIR when configured.`

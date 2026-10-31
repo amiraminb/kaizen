@@ -34,10 +34,12 @@ func TestEditNoteUsesConfiguredEditor(t *testing.T) {
 	}
 }
 
-func TestNoteReadPrintsTheWholeHabitDocument(t *testing.T) {
+func TestNotesReadsTheWholeHabitDocumentByDefault(t *testing.T) {
 	oldRepo, oldSvc := repo, svc
+	oldEdit := notesEdit
 	t.Cleanup(func() {
 		repo, svc = oldRepo, oldSvc
+		notesEdit = oldEdit
 	})
 
 	repo = repository.NewFileRepositoryAt(t.TempDir())
@@ -50,8 +52,9 @@ func TestNoteReadPrintsTheWholeHabitDocument(t *testing.T) {
 	var output bytes.Buffer
 	cmd := &cobra.Command{}
 	cmd.SetOut(&output)
-	if err := printNote(cmd, "read"); err != nil {
-		t.Fatalf("printNote returned error: %v", err)
+	notesEdit = false
+	if err := notesCmd.RunE(cmd, []string{"read"}); err != nil {
+		t.Fatalf("notes returned error: %v", err)
 	}
 	if output.String() != "line one\nline two\n" {
 		t.Errorf("printed note = %q, want the full document", output.String())

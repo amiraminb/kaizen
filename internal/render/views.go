@@ -43,10 +43,11 @@ func (r *Renderer) Report(summaries []stats.Summary, from, to string) string {
 	}
 
 	slugWidth := len("habit")
+	stripWidth := len("days")
 	for _, summary := range summaries {
 		slugWidth = max(slugWidth, len(summary.Habit.Slug))
+		stripWidth = max(stripWidth, len(summary.Cells))
 	}
-	stripWidth := max(len(summaries[0].Cells), len("days"))
 
 	var out strings.Builder
 	fmt.Fprintf(&out, "%s\n\n", r.Muted(from+" .. "+to))

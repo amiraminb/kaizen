@@ -158,20 +158,21 @@ func TestStreaksSpanTheWholeHistoryNotTheWindow(t *testing.T) {
 	}
 }
 
-// Habits of different ages must produce equal-length strips, or the columns after
-// the strip shift per row.
-func TestWindowWiderThanTheHabitStillFillsEveryCell(t *testing.T) {
+func TestWindowWiderThanTheHabitStartsAtTheHabitStartDate(t *testing.T) {
 	asOf := day("2026-09-10")
 	from := asOf.AddDate(0, 0, -9)
 
 	young := Summarize(habit("2026-09-08", ""), indexFrom("2026-09-08", "vv"), from, asOf, asOf)
 	old := Summarize(habit("2026-08-01", ""), indexFrom("2026-09-01", "vvvvvvvvvv"), from, asOf, asOf)
 
-	if len(young.Cells) != 10 || len(old.Cells) != 10 {
-		t.Fatalf("cell counts = %d and %d, want 10 each", len(young.Cells), len(old.Cells))
+	if len(young.Cells) != 3 || len(old.Cells) != 10 {
+		t.Fatalf("cell counts = %d and %d, want 3 and 10", len(young.Cells), len(old.Cells))
 	}
-	if got, want := glyphs(young.Cells), ".......vvo"; got != want {
+	if got, want := glyphs(young.Cells), "vvo"; got != want {
 		t.Errorf("young grid = %q, want %q", got, want)
+	}
+	if young.Cells[0].Date != "2026-09-08" || old.Cells[0].Date != "2026-09-01" {
+		t.Errorf("first dates = %s and %s, want habit start 2026-09-08 and range start 2026-09-01", young.Cells[0].Date, old.Cells[0].Date)
 	}
 	if young.Missed != 0 {
 		t.Errorf("missed = %d, want 0 for days before the habit existed", young.Missed)

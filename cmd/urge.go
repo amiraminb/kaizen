@@ -26,7 +26,7 @@ Answer these questions before you decide what to do:
 		fmt.Fprintln(cmd.OutOrStdout(), "4. What are the thoughts about the main thought?")
 		fmt.Fprintln(cmd.OutOrStdout(), "5. What do you want to do about this?")
 		fmt.Fprintln(cmd.OutOrStdout())
-		fmt.Fprintln(cmd.OutOrStdout(), "Take a note of your answers with: kaizen note <habit>")
+		fmt.Fprintln(cmd.OutOrStdout(), "Take a note of your answers with: kaizen notes <habit> -e")
 		return nil
 	},
 }

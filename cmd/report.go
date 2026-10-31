@@ -20,6 +20,7 @@ var reportCmd = &cobra.Command{
 
 Ranges: %s, Nd for the last N days, YYYY-MM-DD, or YYYY-MM-DD..YYYY-MM-DD.
 Defaults to the current month.
+Each habit's days begin at its start date or the range start, whichever is later.
 
 Subcommands:
   entries [habit] [range]   one row per check-in, with notes`, strings.Join(daterange.Names(), ", ")),
