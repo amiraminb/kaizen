@@ -1,8 +1,6 @@
 package stats
 
 import (
-	"cmp"
-	"slices"
 	"time"
 
 	"github.com/amiraminb/kaizen/internal/model"
@@ -106,8 +104,11 @@ func resolve(within bounds, habitID string, index Index, date, asOf string) (mod
 
 	entry, ok := index.Lookup(habitID, date)
 	if ok {
-		if entry.Status == model.StatusSkipped {
+		switch entry.Status {
+		case model.StatusSkipped:
 			return model.DaySkipped, entry
+		case model.StatusMissed:
+			return model.DayMiss, entry
 		}
 		return model.DayDone, entry
 	}
@@ -174,40 +175,6 @@ func Summarize(habit model.Habit, index Index, from, to time.Time, asOf time.Tim
 		}
 	}
 	return summary
-}
-
-type EntryRow struct {
-	Habit model.Habit
-	Entry model.Entry
-}
-
-// Newest first, because a log is read to answer "what did I just do", and archived
-// habits are included so retiring one never hides its history.
-func EntryRows(habits []model.Habit, entries []model.Entry, from, to string) []EntryRow {
-	byID := make(map[string]model.Habit, len(habits))
-	for _, habit := range habits {
-		byID[habit.ID] = habit
-	}
-
-	var rows []EntryRow
-	for _, entry := range entries {
-		if entry.Date < from || entry.Date > to {
-			continue
-		}
-		habit, ok := byID[entry.HabitID]
-		if !ok {
-			continue
-		}
-		rows = append(rows, EntryRow{Habit: habit, Entry: entry})
-	}
-
-	slices.SortFunc(rows, func(a, b EntryRow) int {
-		if byDate := cmp.Compare(b.Entry.Date, a.Entry.Date); byDate != 0 {
-			return byDate
-		}
-		return cmp.Compare(a.Habit.Slug, b.Habit.Slug)
-	})
-	return rows
 }
 
 func currentStreak(cells []Cell) int {

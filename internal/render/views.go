@@ -73,37 +73,6 @@ func (r *Renderer) Report(summaries []stats.Summary, from, to string) string {
 	return out.String()
 }
 
-func (r *Renderer) Entries(rows []stats.EntryRow) string {
-	if len(rows) == 0 {
-		return "no check-ins in that range\n"
-	}
-
-	slugWidth, statusWidth := len("habit"), len("status")
-	for _, row := range rows {
-		slugWidth = max(slugWidth, len(row.Habit.Slug))
-		statusWidth = max(statusWidth, len(row.Entry.Status))
-	}
-
-	var out strings.Builder
-	writeRow := func(date, slug, status, note string) {
-		line := fmt.Sprintf("%s  %s  %s  %s", Pad(date, len(model.DateLayout)), Pad(slug, slugWidth), Pad(status, statusWidth), note)
-		out.WriteString(strings.TrimRight(line, " ") + "\n")
-	}
-
-	writeRow(r.Muted("date"), r.Muted("habit"), r.Muted("status"), r.Muted("note"))
-	for _, row := range rows {
-		writeRow(row.Entry.Date, r.Label(row.Habit.Slug), r.statusText(row.Entry.Status), row.Entry.Note)
-	}
-	return out.String()
-}
-
-func (r *Renderer) statusText(status string) string {
-	if status == model.StatusSkipped {
-		return r.skipped.Render(status)
-	}
-	return r.done.Render(status)
-}
-
 func (r *Renderer) Strip(cells []stats.Cell) string {
 	var out strings.Builder
 	for _, cell := range cells {

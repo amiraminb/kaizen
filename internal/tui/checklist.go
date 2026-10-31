@@ -17,29 +17,33 @@ const (
 	intentNone intent = iota
 	intentDone
 	intentSkipped
+	intentMissed
 )
 
 type checklistRow struct {
 	habit    model.Habit
 	streak   int
 	original model.DayStatus
+	initial  intent
 	desired  intent
 }
 
 func (r checklistRow) changed() bool {
-	return r.desired != intentOf(r.original)
+	return r.desired != r.initial
 }
 
 func (r checklistRow) toggleable() bool {
 	return r.original != model.DayNotApplicable
 }
 
-func intentOf(status model.DayStatus) intent {
+func intentOf(status string) intent {
 	switch status {
-	case model.DayDone:
+	case model.StatusDone:
 		return intentDone
-	case model.DaySkipped:
+	case model.StatusSkipped:
 		return intentSkipped
+	case model.StatusMissed:
+		return intentMissed
 	default:
 		return intentNone
 	}
@@ -59,12 +63,20 @@ type checklistModel struct {
 func newChecklistModel(summaries []stats.Summary, date string) checklistModel {
 	rows := make([]checklistRow, len(summaries))
 	for i, summary := range summaries {
-		status := summary.StatusOn(date)
+		status, initial := model.DayNotApplicable, intentNone
+		for _, cell := range summary.Cells {
+			if cell.Date == date {
+				// Automatic past misses have no recorded check-in to clear.
+				status, initial = cell.Status, intentOf(cell.Entry.Status)
+				break
+			}
+		}
 		rows[i] = checklistRow{
 			habit:    summary.Habit,
 			streak:   summary.CurrentStreak,
 			original: status,
-			desired:  intentOf(status),
+			initial:  initial,
+			desired:  initial,
 		}
 	}
 	return checklistModel{rows: rows, date: date, heading: date}
@@ -92,6 +104,8 @@ func (m checklistModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.setDesired(intentDone)
 	case "s":
 		m.setDesired(intentSkipped)
+	case "m":
+		m.setDesired(intentMissed)
 	case "c", "x":
 		m.setDesired(intentNone)
 	case "enter":
@@ -121,6 +135,8 @@ func cycle(current intent) intent {
 		return intentDone
 	case intentDone:
 		return intentSkipped
+	case intentSkipped:
+		return intentMissed
 	default:
 		return intentNone
 	}
@@ -158,7 +174,7 @@ func (m checklistModel) View() string {
 		fmt.Fprintf(&out, "%s%s  %s  %s  %s\n", marker, checkbox(row), slug, valueStyle.Render(row.habit.Name), trailing)
 	}
 
-	out.WriteString("\n" + mutedStyle.Render("(space cycle, d done, s skip, c clear, enter save, esc cancel)") + "\n")
+	out.WriteString("\n" + mutedStyle.Render("(space cycle, d done, s skip, m miss, c clear, enter save, esc cancel)") + "\n")
 	return out.String()
 }
 
@@ -172,6 +188,8 @@ func checkbox(row checklistRow) string {
 		return doneStyle.Render("[" + render.GlyphDone + "]")
 	case intentSkipped:
 		return skipStyle.Render("[" + render.GlyphSkipped + "]")
+	case intentMissed:
+		return missStyle.Render("[" + render.GlyphMiss + "]")
 	default:
 		return emptyStyle.Render("[ ]")
 	}
@@ -227,6 +245,8 @@ func applyChecklist(rows []checklistRow, date string) (int, error) {
 			_, err = Svc.CheckIn(row.habit.Slug, date, model.StatusDone, "")
 		case intentSkipped:
 			_, err = Svc.CheckIn(row.habit.Slug, date, model.StatusSkipped, "")
+		case intentMissed:
+			_, err = Svc.CheckIn(row.habit.Slug, date, model.StatusMissed, "")
 		default:
 			_, err = Svc.Undo(row.habit.Slug, date)
 		}

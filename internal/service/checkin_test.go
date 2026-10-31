@@ -97,6 +97,65 @@ func TestCheckInUsesTheDayStartCutoff(t *testing.T) {
 	}
 }
 
+func TestMissedCheckInCountsImmediatelyAndCanBeCorrected(t *testing.T) {
+	for _, initial := range []string{"", model.StatusDone, model.StatusSkipped} {
+		t.Run("previous status="+initial, func(t *testing.T) {
+			now := time.Date(2026, 9, 3, 12, 0, 0, 0, time.UTC)
+			svc, repo := newTestService(t, now)
+			seedHabit(t, repo, "read", "2026-09-01")
+			for _, date := range []string{"2026-09-01", "2026-09-02"} {
+				if _, err := svc.CheckIn("read", date, model.StatusDone, ""); err != nil {
+					t.Fatalf("CheckIn returned error: %v", err)
+				}
+			}
+			if initial != "" {
+				if _, err := svc.CheckIn("read", "", initial, ""); err != nil {
+					t.Fatalf("initial CheckIn returned error: %v", err)
+				}
+			}
+
+			result, err := svc.CheckIn("read", "", model.StatusMissed, "ran out of time")
+			if err != nil {
+				t.Fatalf("missed CheckIn returned error: %v", err)
+			}
+			if result.Created != (initial == "") {
+				t.Errorf("Created = %v for previous status %q", result.Created, initial)
+			}
+
+			report, err := svc.Today(3)
+			if err != nil {
+				t.Fatalf("Today returned error: %v", err)
+			}
+			summary := report.Summaries[0]
+			if summary.Today != model.DayMiss || summary.Done != 2 || summary.Missed != 1 || summary.Skipped != 0 {
+				t.Errorf("summary = %+v, want two done days and one miss today", summary)
+			}
+			if summary.CurrentStreak != 0 || summary.LongestStreak != 2 || summary.Completion() != 2.0/3.0 {
+				t.Errorf("streaks = %d/%d, completion = %f, want 0/2 and 2/3", summary.CurrentStreak, summary.LongestStreak, summary.Completion())
+			}
+			if len(summary.Cells) != 3 {
+				t.Fatalf("got %d cells, want three days of history", len(summary.Cells))
+			}
+			entry := summary.Cells[2].Entry
+			if entry.Date != "2026-09-03" || entry.Status != model.StatusMissed || entry.Note != "ran out of time" {
+				t.Fatalf("entry = %+v, want today's recorded miss with its note", entry)
+			}
+
+			if _, err := svc.CheckIn("read", "", model.StatusDone, ""); err != nil {
+				t.Fatalf("correcting CheckIn returned error: %v", err)
+			}
+			report, err = svc.Today(3)
+			if err != nil {
+				t.Fatalf("Today after correction returned error: %v", err)
+			}
+			summary = report.Summaries[0]
+			if summary.Today != model.DayDone || summary.Missed != 0 || summary.CurrentStreak != 3 || summary.Completion() != 1 {
+				t.Errorf("corrected summary = %+v, want a restored three-day streak and 100%% completion", summary)
+			}
+		})
+	}
+}
+
 func TestCheckInBackfillsAndRejectsInvalidDates(t *testing.T) {
 	now := time.Date(2026, 9, 3, 12, 0, 0, 0, time.UTC)
 

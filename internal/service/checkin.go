@@ -22,7 +22,7 @@ type UndoResult struct {
 
 func (s *Service) CheckIn(habitInput, dateInput, status, note string) (CheckInResult, error) {
 	if !model.ValidStatus(status) {
-		return CheckInResult{}, fmt.Errorf("invalid status %q, want %s or %s", status, model.StatusDone, model.StatusSkipped)
+		return CheckInResult{}, fmt.Errorf("invalid status %q, want %s, %s or %s", status, model.StatusDone, model.StatusSkipped, model.StatusMissed)
 	}
 
 	habit, date, err := s.resolveTarget(habitInput, dateInput)

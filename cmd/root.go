@@ -33,11 +33,11 @@ Common usage:
   kaizen new [name]                       create a habit (prompts if omitted)
   kaizen done <habit>...                  record completed habits
   kaizen skip <habit>...                  record a deliberate rest day
+  kaizen miss <habit>...                  record a missed day, breaking the streak
   kaizen notes <habit>                    print a habit note (default)
   kaizen notes <habit> -e                 edit a habit note in your editor
   kaizen urge                             pause and reflect before an urge
   kaizen report [range]                   view completion and streaks
-  kaizen report entries [habit] [range]   view check-ins and their notes
   kaizen edit [habit]                     rename a habit or change its slug
   kaizen init                             initialize the data directory
 

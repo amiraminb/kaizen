@@ -128,40 +128,6 @@ func TestReportAlignsHabitsOfDifferentAgesAndNameLengths(t *testing.T) {
 	}
 }
 
-func TestEntriesAlignsEveryColumnIncludingTheHeader(t *testing.T) {
-	rendered := New(&bytes.Buffer{}).Entries([]stats.EntryRow{
-		{Habit: model.Habit{Slug: "read"}, Entry: model.Entry{Date: "2026-09-05", Status: model.StatusDone}},
-		{Habit: model.Habit{Slug: "meditate"}, Entry: model.Entry{Date: "2026-09-04", Status: model.StatusSkipped, Note: "travel"}},
-	})
-
-	lines := strings.Split(strings.TrimRight(rendered, "\n"), "\n")
-	if len(lines) != 3 {
-		t.Fatalf("rendered %d lines, want a header and 2 rows:\n%s", len(lines), rendered)
-	}
-
-	habitColumn := strings.Index(lines[0], "habit")
-	for i, line := range lines[1:] {
-		if got := strings.Index(line, "read"); i == 0 && got != habitColumn {
-			t.Errorf("row %d puts the habit at column %d, want %d:\n%s", i, got, habitColumn, rendered)
-		}
-		if got := strings.Index(line, "meditate"); i == 1 && got != habitColumn {
-			t.Errorf("row %d puts the habit at column %d, want %d:\n%s", i, got, habitColumn, rendered)
-		}
-	}
-
-	for i, line := range lines {
-		if strings.HasSuffix(line, " ") {
-			t.Errorf("line %d has trailing whitespace: %q", i, line)
-		}
-	}
-}
-
-func TestEntriesWithNoRowsSaysSo(t *testing.T) {
-	if rendered := New(&bytes.Buffer{}).Entries(nil); !strings.Contains(rendered, "no check-ins") {
-		t.Errorf("empty state = %q, want it to say there are no check-ins", rendered)
-	}
-}
-
 func TestReportShowsRateAndStreaks(t *testing.T) {
 	rendered := New(&bytes.Buffer{}).Report([]stats.Summary{
 		summary("read", "Read daily", 13, 13, model.DayDone, "vvvv"),

@@ -29,7 +29,7 @@ func habit(startDate, archivedAt string) model.Habit {
 	}
 }
 
-// Each rune is one day starting at from: v done, s skipped, . no entry.
+// Each rune is one day starting at from: v done, s skipped, m missed, . no entry.
 func indexFrom(from string, pattern string) Index {
 	var entries []model.Entry
 	start := day(from)
@@ -41,6 +41,8 @@ func indexFrom(from string, pattern string) Index {
 			entries = append(entries, model.Entry{HabitID: habitID, Date: date, Status: model.StatusDone})
 		case 's':
 			entries = append(entries, model.Entry{HabitID: habitID, Date: date, Status: model.StatusSkipped})
+		case 'm':
+			entries = append(entries, model.Entry{HabitID: habitID, Date: date, Status: model.StatusMissed})
 		}
 	}
 	return NewIndex(entries)
@@ -118,6 +120,8 @@ func TestStreaksIgnoreSkippedAndPending(t *testing.T) {
 		{name: "unbroken run", pattern: "vvvvv", asOf: "2026-09-05", wantCurrent: 5, wantLongest: 5},
 		{name: "skip keeps the run alive", pattern: "vvsvv", asOf: "2026-09-05", wantCurrent: 4, wantLongest: 4},
 		{name: "miss breaks the run", pattern: "vv.vv", asOf: "2026-09-05", wantCurrent: 2, wantLongest: 2},
+		{name: "recorded miss breaks the run", pattern: "vvmvv", asOf: "2026-09-05", wantCurrent: 2, wantLongest: 2},
+		{name: "recorded miss today breaks the run immediately", pattern: "vvvvm", asOf: "2026-09-05", wantCurrent: 0, wantLongest: 4},
 		{name: "longest is behind the current", pattern: "vvvv.v", asOf: "2026-09-06", wantCurrent: 1, wantLongest: 4},
 		{name: "pending today does not break the run", pattern: "vvvv.", asOf: "2026-09-05", wantCurrent: 4, wantLongest: 4},
 		{name: "pending today does not extend the run", pattern: "vvv..", asOf: "2026-09-05", wantCurrent: 0, wantLongest: 3},
@@ -238,51 +242,6 @@ func TestArchivedHabitStopsGeneratingMisses(t *testing.T) {
 	}
 	if summary.Today != model.DayNotApplicable {
 		t.Errorf("today = %v, want n/a for an archived habit", summary.Today)
-	}
-}
-
-func TestEntryRows(t *testing.T) {
-	habits := []model.Habit{
-		{ID: "hab_read", Slug: "read", Schedule: model.Schedule{Kind: model.ScheduleDaily}, StartDate: "2026-09-01"},
-		{ID: "hab_gym", Slug: "gym", Schedule: model.Schedule{Kind: model.ScheduleDaily}, StartDate: "2026-09-01"},
-		{ID: "hab_old", Slug: "old", Schedule: model.Schedule{Kind: model.ScheduleDaily}, StartDate: "2026-09-01", ArchivedAt: "2026-09-02T10:00:00Z"},
-	}
-	entries := []model.Entry{
-		{HabitID: "hab_read", Date: "2026-09-01", Status: model.StatusDone},
-		{HabitID: "hab_gym", Date: "2026-09-03", Status: model.StatusSkipped, Note: "rest"},
-		{HabitID: "hab_read", Date: "2026-09-03", Status: model.StatusDone},
-		{HabitID: "hab_old", Date: "2026-09-02", Status: model.StatusDone},
-		{HabitID: "hab_ghost", Date: "2026-09-02", Status: model.StatusDone},
-		{HabitID: "hab_read", Date: "2026-09-09", Status: model.StatusDone},
-	}
-
-	rows := EntryRows(habits, entries, "2026-09-01", "2026-09-03")
-
-	want := []struct{ date, slug string }{
-		{"2026-09-03", "gym"},
-		{"2026-09-03", "read"},
-		{"2026-09-02", "old"},
-		{"2026-09-01", "read"},
-	}
-	if len(rows) != len(want) {
-		t.Fatalf("got %d rows, want %d: %+v", len(rows), len(want), rows)
-	}
-	for i, expected := range want {
-		if rows[i].Entry.Date != expected.date || rows[i].Habit.Slug != expected.slug {
-			t.Errorf("row %d = (%s, %s), want (%s, %s)", i, rows[i].Entry.Date, rows[i].Habit.Slug, expected.date, expected.slug)
-		}
-	}
-	if rows[0].Entry.Note != "rest" {
-		t.Errorf("note = %q, want it carried through", rows[0].Entry.Note)
-	}
-}
-
-func TestEntryRowsWithNoMatchesIsEmpty(t *testing.T) {
-	habits := []model.Habit{{ID: habitID, Slug: "read", StartDate: "2026-09-01"}}
-	entries := []model.Entry{{HabitID: habitID, Date: "2026-09-01", Status: model.StatusDone}}
-
-	if rows := EntryRows(habits, entries, "2026-10-01", "2026-10-31"); len(rows) != 0 {
-		t.Errorf("got %d rows outside the range, want 0", len(rows))
 	}
 }
 

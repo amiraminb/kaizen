@@ -3,6 +3,7 @@ package model
 const (
 	StatusDone    = "done"
 	StatusSkipped = "skipped"
+	StatusMissed  = "missed"
 )
 
 const ScheduleDaily = "daily"
@@ -18,7 +19,7 @@ const (
 )
 
 func ValidStatus(status string) bool {
-	return status == StatusDone || status == StatusSkipped
+	return status == StatusDone || status == StatusSkipped || status == StatusMissed
 }
 
 func ValidScheduleKind(kind string) bool {

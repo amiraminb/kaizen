@@ -3,7 +3,6 @@ package cmd
 import (
 	"fmt"
 	"strings"
-	"time"
 
 	"github.com/amiraminb/kaizen/internal/daterange"
 	"github.com/amiraminb/kaizen/internal/model"
@@ -20,10 +19,7 @@ var reportCmd = &cobra.Command{
 
 Ranges: %s, Nd for the last N days, YYYY-MM-DD, or YYYY-MM-DD..YYYY-MM-DD.
 Defaults to the current month.
-Each habit's days begin at its start date or the range start, whichever is later.
-
-Subcommands:
-  entries [habit] [range]   one row per check-in, with notes`, strings.Join(daterange.Names(), ", ")),
+Each habit's days begin at its start date or the range start, whichever is later.`, strings.Join(daterange.Names(), ", ")),
 	Args: cobra.MaximumNArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
 		asOf, err := svc.AsOf()
@@ -47,35 +43,6 @@ Subcommands:
 	},
 }
 
-var reportEntriesCmd = &cobra.Command{
-	Use:     "entries [habit] [range]",
-	Aliases: []string{"log"},
-	Short:   "Show one row per check-in",
-	Args:    cobra.MaximumNArgs(2),
-	RunE: func(cmd *cobra.Command, args []string) error {
-		asOf, err := svc.AsOf()
-		if err != nil {
-			return err
-		}
-
-		habitInput, rangeInput := splitEntriesArgs(args, asOf)
-
-		from, to, err := daterange.Resolve(rangeInput, asOf)
-		if err != nil {
-			return err
-		}
-
-		rows, err := svc.EntryRows(habitInput, from, to)
-		if err != nil {
-			return err
-		}
-
-		out := cmd.OutOrStdout()
-		fmt.Fprint(out, render.New(out).Entries(rows))
-		return nil
-	},
-}
-
 func firstOrEmpty(args []string) string {
 	if len(args) == 0 {
 		return ""
@@ -83,24 +50,7 @@ func firstOrEmpty(args []string) string {
 	return args[0]
 }
 
-// A lone argument is read as a range when it parses as one, so both
-// "report entries read" and "report entries 7d" work without a placeholder.
-func splitEntriesArgs(args []string, asOf time.Time) (habit string, dateRange string) {
-	switch len(args) {
-	case 1:
-		if _, _, err := daterange.Resolve(args[0], asOf); err == nil {
-			return "", args[0]
-		}
-		return args[0], ""
-	case 2:
-		return args[0], args[1]
-	default:
-		return "", ""
-	}
-}
-
 func init() {
 	reportCmd.Flags().BoolVar(&reportAll, "all", false, "include retired habits")
-	reportCmd.AddCommand(reportEntriesCmd)
 	rootCmd.AddCommand(reportCmd)
 }

@@ -3,8 +3,11 @@ package tui
 import (
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/amiraminb/kaizen/internal/model"
+	"github.com/amiraminb/kaizen/internal/repository"
+	"github.com/amiraminb/kaizen/internal/service"
 	"github.com/amiraminb/kaizen/internal/stats"
 	tea "github.com/charmbracelet/bubbletea"
 )
@@ -38,9 +41,18 @@ const testDate = "2026-09-05"
 func newModel(todays ...model.DayStatus) checklistModel {
 	summaries := make([]stats.Summary, len(todays))
 	for i, today := range todays {
+		entry := model.Entry{}
+		switch today {
+		case model.DayDone:
+			entry.Status = model.StatusDone
+		case model.DaySkipped:
+			entry.Status = model.StatusSkipped
+		case model.DayMiss:
+			entry.Status = model.StatusMissed
+		}
 		summaries[i] = stats.Summary{
 			Habit:         model.Habit{ID: string(rune('a' + i)), Slug: string(rune('a' + i)), Name: "Habit"},
-			Cells:         []stats.Cell{{Date: testDate, Status: today}},
+			Cells:         []stats.Cell{{Date: testDate, Status: today, Entry: entry}},
 			Today:         today,
 			CurrentStreak: i,
 		}
@@ -63,7 +75,7 @@ func TestChecklistCarriesTheDisplayedDate(t *testing.T) {
 func TestChecklistWillNotToggleADayThatDoesNotApply(t *testing.T) {
 	m := newModel(model.DayNotApplicable)
 
-	for _, key := range []string{" ", "d", "s", "c"} {
+	for _, key := range []string{" ", "d", "s", "m", "c"} {
 		if got := press(m, key).rows[0].desired; got != intentNone {
 			t.Errorf("key %q changed a not-applicable row to %v, want it left alone", key, got)
 		}
@@ -86,9 +98,9 @@ func TestChecklistShowsWhyANotApplicableRowIsLocked(t *testing.T) {
 }
 
 func TestChecklistSeedsFromTodaysStatus(t *testing.T) {
-	m := newModel(model.DayPending, model.DayDone, model.DaySkipped)
+	m := newModel(model.DayPending, model.DayDone, model.DaySkipped, model.DayMiss)
 
-	want := []intent{intentNone, intentDone, intentSkipped}
+	want := []intent{intentNone, intentDone, intentSkipped, intentMissed}
 	for i, expected := range want {
 		if m.rows[i].desired != expected {
 			t.Errorf("row %d desired = %v, want %v", i, m.rows[i].desired, expected)
@@ -99,10 +111,10 @@ func TestChecklistSeedsFromTodaysStatus(t *testing.T) {
 	}
 }
 
-func TestChecklistSpaceCyclesThroughThreeStates(t *testing.T) {
+func TestChecklistSpaceCyclesThroughFourStates(t *testing.T) {
 	m := newModel(model.DayPending)
 
-	states := []intent{intentDone, intentSkipped, intentNone, intentDone}
+	states := []intent{intentDone, intentSkipped, intentMissed, intentNone, intentDone}
 	for step, want := range states {
 		m = press(m, " ")
 		if got := m.rows[0].desired; got != want {
@@ -118,6 +130,7 @@ func TestChecklistExplicitKeysSetStateDirectly(t *testing.T) {
 	}{
 		{key: "d", want: intentDone},
 		{key: "s", want: intentSkipped},
+		{key: "m", want: intentMissed},
 		{key: "c", want: intentNone},
 		{key: "x", want: intentNone},
 	}
@@ -189,7 +202,7 @@ func TestChecklistClearingADoneDayIsAChange(t *testing.T) {
 }
 
 func TestChecklistKeysOnAnEmptyListDoNotPanic(t *testing.T) {
-	m := press(newModel(), " ", "d", "s", "c", "up", "down")
+	m := press(newModel(), " ", "d", "s", "m", "c", "up", "down")
 
 	if len(m.rows) != 0 {
 		t.Errorf("rows = %d, want 0", len(m.rows))
@@ -204,5 +217,46 @@ func TestChecklistViewMarksChangedRows(t *testing.T) {
 
 	if !strings.Contains(view, "changed") {
 		t.Errorf("view should mark a modified row as changed:\n%s", view)
+	}
+}
+
+func TestChecklistSavesAndClearsAnExplicitMiss(t *testing.T) {
+	oldSvc := Svc
+	t.Cleanup(func() { Svc = oldSvc })
+	Svc = service.NewWithClock(repository.NewFileRepositoryAt(t.TempDir()), func() time.Time {
+		return time.Date(2026, 9, 5, 12, 0, 0, 0, time.UTC)
+	})
+	if _, err := Svc.CreateHabit("Read", "read", "2026-09-04"); err != nil {
+		t.Fatalf("CreateHabit returned error: %v", err)
+	}
+	load := func(date string) checklistModel {
+		t.Helper()
+		report, err := Svc.Day(date)
+		if err != nil {
+			t.Fatalf("Day returned error: %v", err)
+		}
+		return newChecklistModel(report.Summaries, date)
+	}
+	apply := func(m checklistModel) {
+		t.Helper()
+		if applied, err := applyChecklist(m.rows, m.date); err != nil || applied != 1 {
+			t.Fatalf("applyChecklist = (%d, %v), want one saved change", applied, err)
+		}
+	}
+
+	apply(press(load(testDate), "m"))
+	reloaded := load(testDate)
+	if reloaded.rows[0].changed() || !strings.Contains(reloaded.View(), "[✗]") {
+		t.Errorf("saved miss should show an unchanged checked miss:\n%s", reloaded.View())
+	}
+	apply(press(reloaded, "c"))
+	if got := load(testDate).rows[0].original; got != model.DayPending {
+		t.Errorf("cleared status = %v, want pending", got)
+	}
+
+	// Clearing an automatic past miss must not manufacture a recorded change.
+	past := press(load("2026-09-04"), "c")
+	if past.rows[0].changed() {
+		t.Error("clearing an unrecorded past miss should not count as a change")
 	}
 }
