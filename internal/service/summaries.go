@@ -2,6 +2,7 @@ package service
 
 import (
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/amiraminb/kaizen/internal/clock"
@@ -18,8 +19,8 @@ type Report struct {
 
 // The caller supplies asOf so a command that already resolved it for its date range
 // cannot resolve a second, later one and report two different todays.
-func (s *Service) Summaries(asOf, from, to time.Time, includeArchived bool) (Report, error) {
-	return s.summarizeAsOf(asOf, from, to, includeArchived)
+func (s *Service) Summaries(habitInput string, asOf, from, to time.Time, includeArchived bool) (Report, error) {
+	return s.summarizeAsOf(habitInput, asOf, from, to, includeArchived)
 }
 
 // A single day, resolved the same way a check-in date is, so the checklist can edit a
@@ -41,7 +42,7 @@ func (s *Service) Day(dateInput string) (Report, error) {
 	if day.After(truncateToDay(asOf)) {
 		return Report{}, fmt.Errorf("cannot edit a future date (%s)", date)
 	}
-	return s.summarizeAsOf(asOf, day, day, false)
+	return s.summarizeAsOf("", asOf, day, day, false)
 }
 
 func (s *Service) Today(windowDays int) (Report, error) {
@@ -52,13 +53,20 @@ func (s *Service) Today(windowDays int) (Report, error) {
 
 	today := truncateToDay(asOf)
 	from := today.AddDate(0, 0, -max(windowDays-1, 0))
-	return s.summarizeAsOf(asOf, from, today, false)
+	return s.summarizeAsOf("", asOf, from, today, false)
 }
 
-func (s *Service) summarizeAsOf(asOf, from, to time.Time, includeArchived bool) (Report, error) {
+func (s *Service) summarizeAsOf(habitInput string, asOf, from, to time.Time, includeArchived bool) (Report, error) {
 	habits, err := s.ListHabits(includeArchived)
 	if err != nil {
 		return Report{}, err
+	}
+	if strings.TrimSpace(habitInput) != "" {
+		habit, err := ResolveHabit(habits, habitInput, includeArchived)
+		if err != nil {
+			return Report{}, err
+		}
+		habits = []model.Habit{habit}
 	}
 	entries, err := s.repo.LoadEntries()
 	if err != nil {

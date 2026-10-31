@@ -46,6 +46,9 @@ func summary(slug, name string, current, longest int, today model.DayStatus, pat
 		CurrentStreak: current,
 		LongestStreak: longest,
 	}
+	if len(cells) > 0 {
+		built.Habit.StartDate = cells[0].Date
+	}
 	for _, cell := range cells {
 		switch cell.Status {
 		case model.DayDone:
@@ -106,32 +109,37 @@ func TestDayWithNoHabitsSuggestsTheNextStep(t *testing.T) {
 	}
 }
 
-func TestReportAlignsHabitsOfDifferentAgesAndNameLengths(t *testing.T) {
+func TestReportShowsTotalsBeforeEachHabitsDatedTimeline(t *testing.T) {
 	rendered := New(&bytes.Buffer{}).Report([]stats.Summary{
 		summary("read", "Read daily", 7, 9, model.DayDone, "vvv"),
 		summary("meditate", "Meditate", 1, 4, model.DayPending, "vvvsxo"),
-	}, "2026-08-31", "2026-09-05")
+	}, reportOptions("2026-08-31", "2026-09-05"))
 
-	lines := strings.Split(strings.TrimRight(rendered, "\n"), "\n")
-	if len(lines) != 5 {
-		t.Fatalf("rendered %d lines, want a range line, a blank, a header and 2 rows:\n%s", len(lines), rendered)
+	for _, want := range []string{
+		"Completion = done / (done + missed). Skipped and pending days are excluded.",
+		"read\n  completion: 100% (3/3 days)  3 done  0 missed  0 skipped",
+		"  2026-09-03 .. 2026-09-05\n  Sep 03–05 (Thu–Sat)  ✓✓✓",
+		"meditate\n  completion: 75% (3/4 days)  3 done  1 missed  1 skipped",
+		"  2026-08-31 .. 2026-09-05\n  Aug 31–Sep 05 (Mon–Sat)  ✓✓✓~✗◦",
+	} {
+		if !strings.Contains(rendered, want) {
+			t.Errorf("report should contain %q:\n%s", want, rendered)
+		}
 	}
-
-	stripColumn := strings.Index(lines[2], "days")
-	for i, line := range lines[3:] {
-		if got := strings.IndexAny(line, GlyphDone+GlyphMiss+GlyphPending); got != stripColumn {
-			t.Errorf("row %d starts its strip at column %d, want %d:\n%s", i, got, stripColumn, rendered)
-		}
-		if got, want := len([]rune(line)), len([]rune(lines[2])); got != want {
-			t.Errorf("row %d ends at column %d, want %d to align totals with the header:\n%s", i, got, want, rendered)
-		}
+	if strings.Index(rendered, "3 done") > strings.Index(rendered, "Sep 03–05 (Thu–Sat)  ✓✓✓") {
+		t.Errorf("totals should appear before the timeline:\n%s", rendered)
 	}
 }
 
 func TestReportShowsRateAndStreaks(t *testing.T) {
-	rendered := New(&bytes.Buffer{}).Report([]stats.Summary{
-		summary("read", "Read daily", 13, 13, model.DayDone, "vvvv"),
-	}, "2026-09-01", "2026-09-04")
+	options := reportOptions("2026-09-01", "2026-09-04")
+	habit := model.Habit{ID: "read", Slug: "read", StartDate: "2026-08-24", Schedule: model.Schedule{Kind: model.ScheduleDaily}}
+	var entries []model.Entry
+	for date := reportDate(habit.StartDate); !date.After(options.AsOf); date = date.AddDate(0, 0, 1) {
+		entries = append(entries, model.Entry{HabitID: habit.ID, Date: date.Format(model.DateLayout), Status: model.StatusDone})
+	}
+	s := stats.Summarize(habit, stats.NewIndex(entries), options.From, options.To, options.AsOf)
+	rendered := New(&bytes.Buffer{}).Report([]stats.Summary{s}, options)
 
 	if !strings.Contains(rendered, "2026-09-01 .. 2026-09-04") {
 		t.Errorf("report should state the range it covers:\n%s", rendered)
@@ -139,15 +147,17 @@ func TestReportShowsRateAndStreaks(t *testing.T) {
 	if !strings.Contains(rendered, "100%") {
 		t.Errorf("four done days out of four should read 100%%:\n%s", rendered)
 	}
-	if !strings.Contains(rendered, "13") {
-		t.Errorf("report should carry the streaks:\n%s", rendered)
+	for _, want := range []string{"Streaks as of 2026-09-05", "streak today: 13", "best lifetime: 13"} {
+		if !strings.Contains(rendered, want) {
+			t.Errorf("report should explicitly identify streak scope with %q:\n%s", want, rendered)
+		}
 	}
 }
 
 func TestBufferOutputCarriesNoEscapes(t *testing.T) {
 	rendered := New(&bytes.Buffer{}).Report([]stats.Summary{
 		summary("read", "Read daily", 7, 9, model.DayDone, "vsxo"),
-	}, "2026-09-02", "2026-09-05")
+	}, reportOptions("2026-09-02", "2026-09-05"))
 
 	if strings.Contains(rendered, "\x1b[") {
 		t.Errorf("non-terminal output must carry no ANSI escapes, got %q", rendered)

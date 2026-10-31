@@ -37,7 +37,7 @@ Common usage:
   kaizen notes <habit>                    print a habit note (default)
   kaizen notes <habit> -e                 edit a habit note in your editor
   kaizen urge                             pause and reflect before an urge
-  kaizen report [range]                   view completion and streaks
+  kaizen report [habit] [range]           view completion and streaks
   kaizen edit [habit]                     rename a habit or change its slug
   kaizen init                             initialize the data directory
 

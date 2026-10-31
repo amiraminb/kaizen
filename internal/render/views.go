@@ -37,42 +37,6 @@ func (r *Renderer) Day(summaries []stats.Summary, date string) string {
 	return out.String()
 }
 
-func (r *Renderer) Report(summaries []stats.Summary, from, to string) string {
-	if len(summaries) == 0 {
-		return "no habits yet, add one with: kaizen new \"Read daily\"\n"
-	}
-
-	slugWidth := len("habit")
-	stripWidth := len("days")
-	for _, summary := range summaries {
-		slugWidth = max(slugWidth, len(summary.Habit.Slug))
-		stripWidth = max(stripWidth, len(summary.Cells))
-	}
-
-	var out strings.Builder
-	fmt.Fprintf(&out, "%s\n\n", r.Muted(from+" .. "+to))
-	fmt.Fprintf(&out, "%s  %s  %s  %s  %s  %s\n",
-		Pad(r.Muted("habit"), slugWidth),
-		Pad(r.Muted("days"), stripWidth),
-		r.Muted("done"),
-		r.Muted("rate"),
-		r.Muted("cur"),
-		r.Muted("best"),
-	)
-
-	for _, summary := range summaries {
-		fmt.Fprintf(&out, "%s  %s  %4d  %3.0f%%  %3d  %4d\n",
-			Pad(r.Label(summary.Habit.Slug), slugWidth),
-			Pad(r.Strip(summary.Cells), stripWidth),
-			summary.Done,
-			summary.Completion()*100,
-			summary.CurrentStreak,
-			summary.LongestStreak,
-		)
-	}
-	return out.String()
-}
-
 func (r *Renderer) Strip(cells []stats.Cell) string {
 	var out strings.Builder
 	for _, cell := range cells {

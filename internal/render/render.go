@@ -7,6 +7,7 @@ import (
 
 	"github.com/amiraminb/kaizen/internal/model"
 	"github.com/charmbracelet/lipgloss"
+	"github.com/charmbracelet/x/term"
 	"github.com/muesli/termenv"
 )
 
@@ -19,6 +20,7 @@ const (
 )
 
 type Renderer struct {
+	width   int
 	done    lipgloss.Style
 	skipped lipgloss.Style
 	pending lipgloss.Style
@@ -31,6 +33,12 @@ type Renderer struct {
 // lipgloss already downgrades a non-TTY writer to Ascii; NO_COLOR is honoured on top
 // of that because the glyphs carry every state without needing colour.
 func New(out io.Writer) *Renderer {
+	width := 80
+	if file, ok := out.(interface{ Fd() uintptr }); ok {
+		if columns, _, err := term.GetSize(file.Fd()); err == nil && columns > 0 {
+			width = columns
+		}
+	}
 	renderer := lipgloss.NewRenderer(out)
 	if os.Getenv("NO_COLOR") != "" {
 		renderer.SetColorProfile(termenv.Ascii)
@@ -40,6 +48,7 @@ func New(out io.Writer) *Renderer {
 		return renderer.NewStyle().Foreground(lipgloss.Color(color))
 	}
 	return &Renderer{
+		width:   width,
 		done:    style("2"),
 		skipped: style("4"),
 		pending: style("3"),

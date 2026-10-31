@@ -17,6 +17,8 @@ Local-first CLI tool for tracking daily habits.
 - Pause before giving in to an urge and reflect: `kaizen urge`; save the answers with
   `kaizen notes <habit> -e`
 - Per-habit completion over a range: `kaizen report`, `kaizen report 30d`, `kaizen report lastmonth`
+- Focus on one habit: `kaizen report read month`, `kaizen report read 2026-10-31`,
+  `kaizen report read year`
 - Initialize the data files: `kaizen init`
 
 ```
@@ -31,20 +33,59 @@ Today
 
 $ kaizen report 20d
 2026-08-17 .. 2026-09-05
+Completion = done / (done + missed). Skipped and pending days are excluded.
+Streaks as of 2026-09-05
 
-habit  days                  done  rate  cur  best
-read   ✗✓✓✓✓✗✓✓✓✓✓✓✓~✓✓✓✓✓✓    17   89%   13    13
-gym    ✗✗✓✗✓✗✓✗✓✗✓✗✓✗✓✗✓~✓◦     9   50%    2     2
+read
+  completion: 89% (17/19 days)  17 done  2 missed  1 skipped
+  streak today: 13  best lifetime: 13
+  2026-08-17 .. 2026-09-05
+  Aug 17–23 (Mon–Sun)  ✗✓✓✓✓✗✓
+  Aug 24–30 (Mon–Sun)  ✓✓✓✓✓✓~
+  Aug 31–Sep 05 (Mon–Sat)  ✓✓✓✓✓✓
+
+gym
+  completion: 50% (9/18 days)  9 done  9 missed  1 skipped
+  streak today: 2  best lifetime: 2
+  2026-08-17 .. 2026-09-05
+  Aug 17–23 (Mon–Sun)  ✗✗✓✗✓✗✓
+  Aug 24–30 (Mon–Sun)  ✗✓✗✓✗✓✗
+  Aug 31–Sep 05 (Mon–Sat)  ✓✗✓~✓◦
 ```
 
 ### Ranges
+
+Use `kaizen report [range]` for all active habits, or `kaizen report <habit> <range>`
+for one habit. Habits match by slug or an unambiguous prefix. A single argument is
+always a date or range; with no arguments, the report shows the current month.
+Add `--all` to include retired habits, including when selecting one habit.
 
 `report` accepts `today`, `yesterday`, `week`, `lastweek`,
 `month`, `lastmonth`, `year`, `lastyear`, `Nd` for the last N days, a single
 `YYYY-MM-DD`, or a `YYYY-MM-DD..YYYY-MM-DD` span. The default is the current month.
 Open-ended ranges stop at today rather than running into the future.
-Each habit's report row starts at its start date or the beginning of the requested
+Each habit's timeline starts at its start date or the beginning of the requested
 range, whichever is later; days before the habit started are omitted.
+
+Reports show each habit's name on its own line, followed by an indented row with
+its completion rate and done, missed, and skipped totals before its timeline.
+Completion is `done / (done + missed)`, excluding skipped and
+pending days. For example, `completion: 80% (8/10 days)` means 8 done days out of
+8 done + 2 missed days. The overall percentage covers the selected range; each
+month's percentage in a year report covers only that month's days in the range.
+
+Ranges up to 31 days show one row per Monday–Sunday calendar week, labeled with
+the start/end dates and weekdays. Full weeks have seven marks; partial weeks at
+the habit's start or the range boundaries have fewer. `year`, `lastyear`, and
+longer ranges show one row per month with its completion rate, including the year
+and the completed-day fraction. When selecting a habit, each month also expands
+into its weekly day-by-day rows, with weeks clipped to that month and the selected
+range. Each habit has its own displayed date range; months before it started are
+omitted.
+
+Output wraps to the terminal width, with an 80-column fallback for redirected
+output. A rate of `—` means there are no done or missed days to score: pending and
+skipped days are excluded. Habits that have not started say `starts YYYY-MM-DD`.
 
 A range never ends in the future. An end date past today is clamped to today, and a
 range that starts in the future is rejected.
@@ -129,7 +170,9 @@ addressed by its slug, and any unambiguous prefix works: `kaizen done med` resol
 
 Streaks are always measured over a habit's whole history, never over the window on
 screen, so a 30-day report cannot cap a 40-day run at 30. Streak numbers appear in
-`kaizen report` as `cur` and `best`, and next to each habit in the checklist.
+`kaizen report` as `streak today` and `best lifetime`, and next to each habit in the
+checklist. The report heading states the streaks' as-of date, even when the selected
+range is historical; the counts and rates cover only the selected range.
 
 Bare `kaizen` opens today by default and any past day with `-d`, and lets you clear a
 check-in recorded by mistake. It needs a terminal: piped or
