@@ -30,7 +30,7 @@ func TestReportGroupsDailyMarksByCalendarWeek(t *testing.T) {
 		summary("read", "Read", 16, 16, model.DayDone, strings.Repeat("v", 16)),
 	}, reportOptions("2026-08-21", lastDay))
 
-	want := "  Aug 21–23 (Fri–Sun)  ✓✓✓\n  Aug 24–30 (Mon–Sun)  ✓✓✓✓✓✓✓\n  Aug 31–Sep 05 (Mon–Sat)  ✓✓✓✓✓✓\n"
+	want := "  Aug 21–22 (Fri–Sat)  ✓✓\n  Aug 23–29 (Sun–Sat)  ✓✓✓✓✓✓✓\n  Aug 30–Sep 05 (Sun–Sat)  ✓✓✓✓✓✓✓\n"
 	if !strings.Contains(rendered, want) {
 		t.Errorf("each calendar week should have its own dated row, with seven days in a full week and explicit partial-week boundaries:\n%s", rendered)
 	}
@@ -78,9 +78,9 @@ func TestSingleHabitYearReportExpandsMonthsIntoWeeks(t *testing.T) {
 	}, options)
 
 	want := `  Aug 2026 completion: 100% (11/11 days)
-    Aug 21–23 (Fri–Sun)  ✓✓✓
-    Aug 24–30 (Mon–Sun)  ✓✓✓✓✓✓✓
-    Aug 31 (Mon)  ✓
+    Aug 21–22 (Fri–Sat)  ✓✓
+    Aug 23–29 (Sun–Sat)  ✓✓✓✓✓✓✓
+    Aug 30–31 (Sun–Mon)  ✓✓
   Sep 2026 completion: 100% (5/5 days)
     Sep 01–05 (Tue–Sat)  ✓✓✓✓✓
 `

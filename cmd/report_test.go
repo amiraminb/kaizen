@@ -48,6 +48,8 @@ func TestReportSelectsHabitAndRange(t *testing.T) {
 	}{
 		{name: "default month for all habits", want: slugs[:4], header: "2026-10-01 .. 2026-10-31"},
 		{name: "single range wins over a matching habit name", args: []string{"month"}, want: slugs[:4], header: "2026-10-01 .. 2026-10-31"},
+		{name: "week uses sunday through saturday", args: []string{"week"}, want: slugs[:4], header: "2026-10-25 .. 2026-10-31"},
+		{name: "lastweek uses sunday through saturday", args: []string{"lastweek"}, want: slugs[:4], header: "2026-10-18 .. 2026-10-24"},
 		{name: "single date for all habits", args: []string{"2026-10-30"}, want: slugs[:4], header: "2026-10-30 .. 2026-10-30"},
 		{name: "exact habit wins over prefixes", args: []string{"read", "month"}, want: []string{"read"}, header: "2026-10-01 .. 2026-10-31"},
 		{name: "habit prefix with a single date", args: []string{"g", "2026-10-30"}, want: []string{"gym"}, header: "2026-10-30 .. 2026-10-30"},
@@ -98,7 +100,7 @@ func TestReportSelectsHabitAndRange(t *testing.T) {
 			if tc.monthly && !strings.Contains(rendered, "Oct 2026 completion:") {
 				t.Errorf("selected-habit year report should use monthly rates:\n%s", rendered)
 			}
-			if got := strings.Contains(rendered, "\n    Oct 01–04 (Thu–Sun)"); got != tc.details {
+			if got := strings.Contains(rendered, "\n    Oct 01–03 (Thu–Sat)"); got != tc.details {
 				t.Errorf("monthly weekly details present = %v, want %v:\n%s", got, tc.details, rendered)
 			}
 		})

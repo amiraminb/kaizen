@@ -114,7 +114,7 @@ func (r *Renderer) weeklyStrips(cells []stats.Cell) []string {
 	}
 	for i := range cells {
 		date, _ := time.Parse(model.DateLayout, cells[i].Date)
-		if i > 0 && (date.Weekday() == time.Monday || date.AddDate(0, 0, -1).Format(model.DateLayout) != cells[i-1].Date) {
+		if i > 0 && (date.Weekday() == time.Sunday || date.AddDate(0, 0, -1).Format(model.DateLayout) != cells[i-1].Date) {
 			appendWeek(i)
 			start = i
 		}

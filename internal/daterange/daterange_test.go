@@ -8,12 +8,13 @@ import (
 )
 
 func TestResolve(t *testing.T) {
-	// 2026-09-17 is a Thursday, so the ISO week starts Monday 2026-09-14.
+	// 2026-09-17 is a Thursday, so its week starts Sunday 2026-09-13.
 	asOf := time.Date(2026, 9, 17, 14, 30, 0, 0, time.UTC)
 
 	tests := []struct {
 		name      string
 		input     string
+		asOf      time.Time
 		wantFrom  string
 		wantTo    string
 		wantError bool
@@ -22,8 +23,11 @@ func TestResolve(t *testing.T) {
 		{name: "month", input: "month", wantFrom: "2026-09-01", wantTo: "2026-09-17"},
 		{name: "today", input: "today", wantFrom: "2026-09-17", wantTo: "2026-09-17"},
 		{name: "yesterday", input: "yesterday", wantFrom: "2026-09-16", wantTo: "2026-09-16"},
-		{name: "week starts monday and stops today", input: "week", wantFrom: "2026-09-14", wantTo: "2026-09-17"},
-		{name: "lastweek is a full monday to sunday", input: "lastweek", wantFrom: "2026-09-07", wantTo: "2026-09-13"},
+		{name: "week starts sunday and stops today", input: "week", wantFrom: "2026-09-13", wantTo: "2026-09-17"},
+		{name: "lastweek is a full sunday to saturday", input: "lastweek", wantFrom: "2026-09-06", wantTo: "2026-09-12"},
+		{name: "sunday begins a new week", input: "week", asOf: time.Date(2026, 9, 13, 12, 0, 0, 0, time.UTC), wantFrom: "2026-09-13", wantTo: "2026-09-13"},
+		{name: "saturday completes the current week", input: "week", asOf: time.Date(2026, 9, 19, 12, 0, 0, 0, time.UTC), wantFrom: "2026-09-13", wantTo: "2026-09-19"},
+		{name: "lastweek on sunday ends yesterday", input: "lastweek", asOf: time.Date(2026, 9, 13, 12, 0, 0, 0, time.UTC), wantFrom: "2026-09-06", wantTo: "2026-09-12"},
 		{name: "lastmonth is a full month", input: "lastmonth", wantFrom: "2026-08-01", wantTo: "2026-08-31"},
 		{name: "year stops today", input: "year", wantFrom: "2026-01-01", wantTo: "2026-09-17"},
 		{name: "lastyear is a full year", input: "lastyear", wantFrom: "2025-01-01", wantTo: "2025-12-31"},
@@ -50,7 +54,11 @@ func TestResolve(t *testing.T) {
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			from, to, err := Resolve(tc.input, asOf)
+			date := asOf
+			if !tc.asOf.IsZero() {
+				date = tc.asOf
+			}
+			from, to, err := Resolve(tc.input, date)
 			if tc.wantError {
 				if err == nil {
 					t.Fatalf("Resolve(%q) = %s..%s, want error", tc.input, format(from), format(to))

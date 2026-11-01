@@ -119,9 +119,5 @@ func DateOnly(t time.Time) time.Time {
 }
 
 func startOfWeek(t time.Time) time.Time {
-	weekday := int(t.Weekday())
-	if weekday == 0 {
-		weekday = 7
-	}
-	return t.AddDate(0, 0, -(weekday - 1))
+	return t.AddDate(0, 0, -int(t.Weekday()))
 }

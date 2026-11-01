@@ -22,7 +22,7 @@ argument is a date or range. Supply a habit slug (or unambiguous prefix) followe
 by a date or range to show only that habit.
 Each habit's days begin at its start date or the range start, whichever is later.
 
-Short ranges show one row per Monday–Sunday calendar week, labeled with its dates
+Short ranges show one row per Sunday–Saturday calendar week, labeled with its dates
 and weekdays. The first and last weeks may be partial. Year ranges and ranges
 longer than 31 days show one row per month with its completion rate. Output fits
 the terminal width. When selecting a habit, each monthly section also shows that

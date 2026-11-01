@@ -40,17 +40,17 @@ read
   completion: 89% (17/19 days)  17 done  2 missed  1 skipped
   streak today: 13  best lifetime: 13
   2026-08-17 .. 2026-09-05
-  Aug 17–23 (Mon–Sun)  ✗✓✓✓✓✗✓
-  Aug 24–30 (Mon–Sun)  ✓✓✓✓✓✓~
-  Aug 31–Sep 05 (Mon–Sat)  ✓✓✓✓✓✓
+  Aug 17–22 (Mon–Sat)  ✗✓✓✓✓✗
+  Aug 23–29 (Sun–Sat)  ✓✓✓✓✓✓✓
+  Aug 30–Sep 05 (Sun–Sat)  ~✓✓✓✓✓✓
 
 gym
   completion: 50% (9/18 days)  9 done  9 missed  1 skipped
   streak today: 2  best lifetime: 2
   2026-08-17 .. 2026-09-05
-  Aug 17–23 (Mon–Sun)  ✗✗✓✗✓✗✓
-  Aug 24–30 (Mon–Sun)  ✗✓✗✓✗✓✗
-  Aug 31–Sep 05 (Mon–Sat)  ✓✗✓~✓◦
+  Aug 17–22 (Mon–Sat)  ✗✗✓✗✓✗
+  Aug 23–29 (Sun–Sat)  ✓✗✓✗✓✗✓
+  Aug 30–Sep 05 (Sun–Sat)  ✗✓✗✓~✓◦
 ```
 
 ### Ranges
@@ -74,7 +74,7 @@ pending days. For example, `completion: 80% (8/10 days)` means 8 done days out o
 8 done + 2 missed days. The overall percentage covers the selected range; each
 month's percentage in a year report covers only that month's days in the range.
 
-Ranges up to 31 days show one row per Monday–Sunday calendar week, labeled with
+Ranges up to 31 days show one row per Sunday–Saturday calendar week, labeled with
 the start/end dates and weekdays. Full weeks have seven marks; partial weeks at
 the habit's start or the range boundaries have fewer. `year`, `lastyear`, and
 longer ranges show one row per month with its completion rate, including the year
@@ -82,6 +82,9 @@ and the completed-day fraction. When selecting a habit, each month also expands
 into its weekly day-by-day rows, with weeks clipped to that month and the selected
 range. Each habit has its own displayed date range; months before it started are
 omitted.
+
+`week` runs from Sunday through today; `lastweek` covers the previous Sunday
+through Saturday.
 
 Output wraps to the terminal width, with an 80-column fallback for redirected
 output. A rate of `—` means there are no done or missed days to score: pending and
